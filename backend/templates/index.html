@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Covoiturage</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    #map {
+      z-index: 10 !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  {% csrf_token %} <!-- OBLIGATOIRE POUR CSRF -->
+
+  <div class="container mx-auto p-6 max-w-6xl">
+    <h1 class="text-4xl font-bold text-center mb-8 text-blue-700">Covoiturage</h1>
+
+    <!-- Auth -->
+    <div id="auth-section" class="mb-8 text-center">
+      <button id="login-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Se connecter</button>
+      <button id="register-btn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 ml-2 hidden">S'inscrire</button>
+      <button id="logout-btn" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 hidden">Se déconnecter</button>
+      <div id="user-info" class="mt-2 text-gray-700 flex items-center justify-center gap-3">
+        <img id="user-avatar" src="" class="w-10 h-10 rounded-full object-cover hidden" alt="Avatar">
+        <span id="username-display"></span>
+        <a href="#" onclick="showProfile()" class="text-blue-600 hover:underline">Profil</a>
+        <button onclick="logout()" class="text-red-600 hover:underline">Déconnexion</button>
+      </div>
+    </div>
+
+    <!-- Créer trajet -->
+    <div id="create-trip-form" class="bg-white p-6 rounded-lg shadow mb-8 hidden">
+      <h2 class="text-2xl font-bold mb-4">Proposer un trajet</h2>
+      <form id="trip-form">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="text" placeholder="Départ" id="departure" class="p-3 border rounded" required>
+          <input type="text" placeholder="Arrivée" id="arrival" class="p-3 border rounded" required>
+          <input type="datetime-local" id="date" class="p-3 border rounded" required>
+          <input type="text" placeholder="Lieu de rendez-vous" id="meeting_point" class="p-3 border rounded">
+          <input type="number" placeholder="Places" id="seats" min="1" class="p-3 border rounded" required>
+          <input type="number" step="0.01" placeholder="Prix (€)" id="price" class="p-3 border rounded" required>
+        </div>
+        <button type="submit" class="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Publier</button>
+      </form>
+    </div>
+
+    <!-- Filtres -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-wrap gap-4">
+      <input type="text" id="filter-departure" placeholder="Départ..." class="p-2 border rounded flex-1 min-w-40">
+      <input type="text" id="filter-arrival" placeholder="Arrivée..." class="p-2 border rounded flex-1 min-w-40">
+      <input type="date" id="filter-date" class="p-2 border rounded">
+      <button onclick="loadTrips()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Filtrer</button>
+      <button onclick="clearFilters()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Effacer</button>
+    </div>
+
+    <!-- Liste des trajets -->
+    <div id="trips" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"></div>
+  </div>
+
+  <!-- Modal Connexion -->
+  <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-6">Connexion</h2>
+      <form id="login-form">
+        <input type="text" id="username" placeholder="Nom d'utilisateur" class="w-full p-3 mb-4 border rounded" required>
+        <input type="password" id="password" placeholder="Mot de passe" class="w-full p-3 mb-4 border rounded" required>
+        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">Se connecter</button>
+      </form>
+      <button id="close-modal" class="mt-4 text-gray-500 hover:text-gray-700">Fermer</button>
+    </div>
+  </div>
+
+  <!-- Modal Inscription -->
+  <div id="register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-blue-600">Inscription</h2>
+        <button onclick="document.getElementById('register-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">&times;</button>
+      </div>
+      <form id="register-form">
+        <input type="text" id="reg-username" placeholder="Nom d'utilisateur" class="w-full p-3 border rounded mb-3" required>
+        <input type="email" id="reg-email" placeholder="Email" class="w-full p-3 border rounded mb-3" required>
+        <input type="password" id="reg-password" placeholder="Mot de passe" class="w-full p-3 border rounded mb-4" required>
+        <button type="submit" class="w-full bg-green-600 text-white p-3 rounded font-semibold hover:bg-green-700">S'inscrire</button>
+      </form>
+      <p class="text-center mt-4 text-sm">
+        Déjà un compte ? <a href="#" onclick="openRegister(); openLogin();" class="text-blue-600 hover:underline">Se connecter</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Modal Profil -->
+  <div id="profile-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">Mon Profil</h2>
+        <button onclick="closeProfile()" class="text-gray-600 text-2xl">×</button>
+      </div>
+      <div id="profile-content" class="text-center">Chargement...</div>
+    </div>
+  </div>
+
+  <!-- Carte -->
+  <div id="map" class="bg-white rounded-lg shadow mb-6 h-96 w-full"></div>
+
+  <!-- TON SCRIPT JS COMPLET -->
+<script>
+  const API_URL = 'http://127.0.0.1:8000/api';
+  let token = localStorage.getItem('token') || null;
+  let currentUser = null;
+  let currentUserPhoto = null; // AJOUTÉ : Variable globale pour la photo
+
+  const loginBtn = document.getElementById('login-btn');
+  const registerBtn = document.getElementById('register-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const userInfo = document.getElementById('user-info');
+  const createForm = document.getElementById('create-trip-form');
+  const tripForm = document.getElementById('trip-form');
+  const tripsContainer = document.getElementById('trips');
+  const modal = document.getElementById('login-modal');
+  const loginForm = document.getElementById('login-form');
+  const closeModal = document.getElementById('close-modal');
+  const profileModal = document.getElementById('profile-modal');
+  const profileContent = document.getElementById('profile-content');
+  const userAvatar = document.getElementById('user-avatar');
+  const usernameDisplay = document.getElementById('username-display');
+  const registerModal = document.getElementById('register-modal');
+  const registerForm = document.getElementById('register-form');
+
+  let map = null;
+  let markers = [];
+  let polylines = [];
+
+  function initMap() {
+    if (map) return;
+    map = L.map('map').setView([46.2276, 2.2137], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+  }
+
+  function clearMap() {
+    if (!map) return;
+    markers.forEach(m => map.removeLayer(m));
+    polylines.forEach(p => map.removeLayer(p));
+    markers = [];
+    polylines = [];
+  }
+
+  async function geocode(city) {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`);
+      const data = await res.json();
+      if (data && data[0]) {
+        return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      }
+    } catch (err) {
+      console.log("Erreur géocodage:", err);
+    }
+    return null;
+  }
+
+  async function addTripToMap(trip) {
+    const [depLatLng, arrLatLng] = await Promise.all([
+      geocode(trip.departure),
+      geocode(trip.arrival)
+    ]);
+
+    const dep = depLatLng || [48.8566, 2.3522];
+    const arr = arrLatLng || [45.7640, 4.8357];
+
+    const markerDep = L.marker(dep).addTo(map).bindPopup(`<b>${trip.departure}</b><br>${trip.arrival} - ${trip.price}€`);
+    const markerArr = L.marker(arr).addTo(map).bindPopup(`<b>${trip.arrival}</b><br>${trip.departure}`);
+    const polyline = L.polyline([dep, arr], { color: 'blue', weight: 3, opacity: 0.7 }).addTo(map);
+
+    markers.push(markerDep, markerArr);
+    polylines.push(polyline);
+
+    setTimeout(() => {
+      const btn = document.querySelector(`button[onclick*="(${trip.id})"]`);
+      if (btn) {
+        btn.addEventListener('click', () => map.fitBounds([dep, arr]));
+      }
+    }, 100);
+  }
+
+  function updateUI() {
+    if (token) {
+      loginBtn.classList.add('hidden');
+      registerBtn.classList.add('hidden');
+      logoutBtn.classList.remove('hidden');
+      createForm.classList.remove('hidden');
+      usernameDisplay.textContent = `Connecté : ${currentUser || 'Utilisateur'}`;
+      loadTrips();
+    } else {
+      loginBtn.classList.remove('hidden');
+      registerBtn.classList.remove('hidden');
+      logoutBtn.classList.add('hidden');
+      createForm.classList.add('hidden');
+      userInfo.innerHTML = '';
+      userAvatar.classList.add('hidden');
+    }
+  }
+
+  loginBtn.onclick = () => modal.classList.remove('hidden');
+  closeModal.onclick = () => modal.classList.add('hidden');
+
+  loginForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api-auth/token/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        token = data.token;
+        localStorage.setItem('token', token);
+        currentUser = username;
+        modal.classList.add('hidden');
+        await loadUserProfile();
+        updateUI();
+        window.location.reload();
+      } else {
+        alert('Identifiants incorrects');
+      }
+    } catch (err) {
+      alert('Erreur réseau');
+    }
+  };
+
+  registerBtn.onclick = () => registerModal.classList.remove('hidden');
+  window.openRegister = () => registerModal.classList.remove('hidden');
+  window.openLogin = () => {
+    modal.classList.remove('hidden');
+    registerModal.classList.add('hidden');
+  };
+
+  registerForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('reg-username').value;
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
+
+    try {
+      const res = await fetch(`${API_URL}/users/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+
+      if (res.ok) {
+        const tokenRes = await fetch('http://127.0.0.1:8000/api-auth/token/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const tokenData = await tokenRes.json();
+        token = tokenData.token;
+        localStorage.setItem('token', token);
+        currentUser = username;
+        registerModal.classList.add('hidden');
+        await loadUserProfile();
+        updateUI();
+        alert('Inscription réussie !');
+        window.location.reload();
+      } else {
+        const err = await res.json();
+        alert('Erreur : ' + JSON.stringify(err));
+      }
+    } catch (err) {
+      alert('Erreur réseau');
+    }
+  };
+
+  window.logout = () => {
+    localStorage.removeItem('token');
+    token = null;
+    currentUser = null;
+    window.location.reload();
+  };
+
+  tripForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = {
+      departure: document.getElementById('departure').value.trim(),
+      arrival: document.getElementById('arrival').value.trim(),
+      date: document.getElementById('date').value + ':00',
+      seats_available: parseInt(document.getElementById('seats').value),
+      price: parseFloat(document.getElementById('price').value),
+      meeting_point: document.getElementById('meeting_point').value || null
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/trips/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        tripForm.reset();
+        loadTrips();
+        alert('Trajet publié avec succès !');
+      } else {
+        const err = await res.text();
+        alert('Erreur : ' + err);
+      }
+    } catch (err) {
+      alert('Erreur réseau');
+    }
+  };
+
+  // === RÉSERVER SANS PAYER ===
+  window.bookTrip = async function(tripId) {
+    if (!token) return alert('Connectez-vous pour réserver');
+
+    try {
+      const res = await fetch(`${API_URL}/trips/${tripId}/book/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('Réservé ! Vous pouvez maintenant payer.');
+        loadTrips();
+      } else {
+        alert(data.status || 'Erreur lors de la réservation');
+      }
+    } catch (err) {
+      alert('Erreur réseau');
+    }
+  };
+
+  // === PAYER APRÈS RÉSERVATION ===
+  window.payTrip = async function(tripId) {
+    if (!token) return alert('Connectez-vous');
+
+    try {
+      const res = await fetch(`${API_URL}/trips/${tripId}/pay/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const stripe = Stripe('pk_test_51SKy5zDcsfPHngpW3yqDRqoYIxjLpltM8iTXSzNYA7iOTkCzkBgObSlejcs9P8dPWEY89MmDqyLgS9JtgIdXkaUb00NVBSazeH');
+        stripe.redirectToCheckout({ sessionId: data.id });
+      } else {
+        alert(data.error || 'Erreur paiement');
+      }
+    } catch (err) {
+      alert('Erreur réseau');
+    }
+  };
+
+  // === CHARGEMENT DES TRAJETS ===
+  async function loadTrips() {
+    tripsContainer.innerHTML = '<p class="text-center col-span-full">Chargement...</p>';
+
+    const dep = document.getElementById('filter-departure').value.trim();
+    const arr = document.getElementById('filter-arrival').value.trim();
+    const date = document.getElementById('filter-date').value;
+
+    let url = `${API_URL}/trips/?`;
+    if (dep) url += `departure=${encodeURIComponent(dep)}&`;
+    if (arr) url += `arrival=${encodeURIComponent(arr)}&`;
+    if (date) url += `date=${date}&`;
+
+    try {
+      const res = await fetch(url);
+      const trips = await res.json();
+
+      tripsContainer.innerHTML = '';
+      if (!Array.isArray(trips) || trips.length === 0) {
+        tripsContainer.innerHTML = '<p class="text-center text-gray-500 col-span-full">Aucun trajet trouvé.</p>';
+        clearMap();
+        return;
+      }
+
+      if (!map) initMap();
+      clearMap();
+
+      trips.forEach(trip => {
+        const dateStr = new Date(trip.date).toLocaleString('fr-FR');
+
+        const hasBooking = token && trip.bookings && trip.bookings.some(b => b.passenger === currentUser);
+        const hasPaid = hasBooking && trip.bookings.find(b => b.passenger === currentUser)?.payment?.paid;
+
+        let buttonHtml = '';
+
+        if (hasPaid) {
+          buttonHtml = `<span class="text-green-600 font-bold">Payé</span>`;
+        } else if (hasBooking) {
+          buttonHtml = `
+            <button onclick="payTrip(${trip.id})" 
+                    class="mt-3 px-4 py-2 rounded text-sm font-medium bg-green-600 hover:bg-green-700 text-white">
+              Payer ${trip.price} €
+            </button>`;
+        } else if (token && trip.seats_available > 0 && trip.driver !== currentUser) {
+          buttonHtml = `
+            <button onclick="bookTrip(${trip.id})" 
+                    class="mt-3 px-4 py-2 rounded text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white">
+              Réserver
+            </button>`;
+        } else {
+          const reason = trip.seats_available === 0 ? 'Complet' : (trip.driver === currentUser ? 'Votre trajet' : 'Connexion requise');
+          buttonHtml = `<button disabled class="mt-3 px-4 py-2 rounded text-sm font-medium bg-gray-400 text-gray-600">
+            ${reason}
+          </button>`;
+        }
+
+        const card = `
+          <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+            <h3 class="font-bold text-xl text-blue-600">${trip.departure} to ${trip.arrival}</h3>
+            <p class="text-gray-700 mt-2">Date: ${dateStr}</p>
+            <p class="text-gray-600">Conducteur: ${trip.driver}</p>
+            ${trip.meeting_point ? `<p class="text-sm text-indigo-600 mt-1">Lieu RDV: ${trip.meeting_point}</p>` : ''}
+            <p class="text-green-600 font-bold text-lg mt-1">Prix: ${trip.price} €</p>
+            <p class="text-sm text-gray-500">Places: ${trip.seats_available}</p>
+            ${buttonHtml}
+          </div>`;
+        tripsContainer.innerHTML += card;
+        addTripToMap(trip);
+      });
+    } catch (err) {
+      tripsContainer.innerHTML = '<p class="text-red-500 text-center col-span-full">Erreur API</p>';
+    }
+  }
+
+  // === CHARGER LE PROFIL UTILISATEUR ===
+  async function loadUserProfile() {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/users/me/`, {
+        headers: { 'Authorization': `Token ${token}` }
+      });
+      if (res.ok) {
+        const user = await res.json();
+        currentUser = user.username;
+        currentUserPhoto = user.profile?.photo || null; // MAJ globale
+        usernameDisplay.textContent = `Connecté : ${currentUser}`;
+        updateAvatar(currentUserPhoto); // Mise à jour immédiate
+      }
+    } catch (err) {
+      console.log("Erreur profil:", err);
+    }
+  }
+
+  // === METTRE À JOUR L'AVATAR ===
+  function updateAvatar(photoUrl) {
+    if (photoUrl) {
+      userAvatar.src = photoUrl;
+      userAvatar.classList.remove('hidden');
+      const profileImg = document.getElementById('profile-avatar');
+      if (profileImg) profileImg.src = photoUrl;
+    } else {
+      userAvatar.classList.add('hidden');
+    }
+  }
+
+  // === UPLOAD PHOTO DE PROFIL ===
+  window.uploadUserPhoto = async function() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      try {
+        const res = await fetch(`${API_URL}/upload-photo/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Token ${token}` },
+          body: formData
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentUserPhoto = data.photo;  // MAJ globale
+          updateAvatar(data.photo);       // MAJ immédiate partout
+          await loadUserProfile();        // Recharge les données
+          alert('Photo mise à jour !');
+        } else {
+          alert('Erreur upload');
+        }
+      } catch (err) {
+        alert('Erreur réseau');
+      }
+    };
+    input.click();
+  };
+
+  // === AFFICHER LE PROFIL ===
+  window.showProfile = async function() {
+    profileModal.classList.remove('hidden');
+    profileContent.innerHTML = '<p class="text-center">Chargement...</p>';
+
+    try {
+      await loadUserProfile();
+
+      let bookings = [];
+      try {
+        const bookingsRes = await fetch(`${API_URL}/bookings/`, {
+          headers: { 'Authorization': `Token ${token}` }
+        });
+        if (bookingsRes.ok) {
+          bookings = await bookingsRes.json();
+        }
+      } catch (err) {
+        console.warn("Erreur bookings:", err);
+      }
+
+      let myTrips = [];
+      try {
+        const myTripsRes = await fetch(`${API_URL}/trips/?driver=${encodeURIComponent(currentUser)}`, {
+          headers: { 'Authorization': `Token ${token}` }
+        });
+        if (myTripsRes.ok) {
+          myTrips = await myTripsRes.json();
+        }
+      } catch (err) {
+        console.warn("Erreur my trips:", err);
+      }
+
+      const html = `
+        <div class="text-center mb-6">
+          <img id="profile-avatar" 
+               src="${currentUserPhoto || 'https://via.placeholder.com/96?text=Photo'}" 
+               class="w-24 h-24 rounded-full object-cover mx-auto mb-3" alt="Avatar">
+          <button onclick="uploadUserPhoto()" 
+                  class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+            Changer la photo
+          </button>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-xl font-bold mb-3 text-green-600">Mes trajets proposés</h3>
+            ${myTrips.length === 0 ? '<p class="text-gray-500">Aucun trajet proposé.</p>' : ''}
+            ${myTrips.map(t => `
+              <div class="bg-gray-50 p-4 rounded mb-3">
+                <p><strong>${t.departure} to ${t.arrival}</strong></p>
+                <p>Date: ${new Date(t.date).toLocaleString('fr-FR')}</p>
+                <p>Places: ${t.seats_available}</p>
+              </div>
+            `).join('')}
+          </div>
+          <div>
+            <h3 class="text-xl font-bold mb-3 text-orange-600">Mes réservations</h3>
+            ${bookings.length === 0 ? '<p class="text-gray-500">Aucune réservation.</p>' : ''}
+            ${bookings.map(b => `
+              <div class="bg-orange-50 p-4 rounded mb-3">
+                <p><strong>${b.trip_departure} to ${b.trip_arrival}</strong></p>
+                <p>Conducteur: ${b.trip_driver}</p>
+                <p>Date: ${new Date(b.trip_date).toLocaleString('fr-FR')}</p>
+                <p>Réservé le: ${new Date(b.booked_at).toLocaleString('fr-FR')}</p>
+                <p class="${b.payment?.paid ? 'text-green-600' : 'text-orange-600'}">
+                  ${b.payment?.paid ? 'Payé' : 'En attente de paiement'}
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      profileContent.innerHTML = html;
+
+    } catch (err) {
+      console.error("ERREUR CRITIQUE DANS showProfile():", err);
+      profileContent.innerHTML = '<p class="text-red-500 text-center">Erreur chargement profil</p>';
+    }
+  };
+
+  window.closeProfile = () => profileModal.classList.add('hidden');
+
+  // === INITIALISATION ===
+  if (token) {
+    loadUserProfile().then(() => updateUI());
+  } else {
+    updateUI();
+  }
+</script>
+</body>
+</html>
