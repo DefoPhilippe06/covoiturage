@@ -1,30 +1,17 @@
+# backend/trips/serializers.py
 from rest_framework import serializers
-from .models import Trip, Booking, Payment, UserProfile
-from django.contrib.auth.models import User
-
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserProfile
-        fields = ['photo']
-
-class UserSerializer(serializers.ModelSerializer):
-    profile = UserProfileSerializer(source='profile', read_only=True)
-
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'profile']
+from .models import Trip, Booking, Payment
+from users.serializers import UserSerializer  # Import unique
 
 
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = ['id', 'amount', 'commission', 'driver_earnings', 'paid', 'created_at']
-        read_only_fields = ['commission', 'driver_earnings', 'paid', 'created_at']
+        fields = ['id', 'amount', 'commission', 'driver_earnings', 'paid']
+        read_only_fields = ['commission', 'driver_earnings', 'paid']
 
 
 class BookingSerializer(serializers.ModelSerializer):
-    # AU LIEU DE TripSerializer → UTILISE DES CHAMPS SIMPLES
     trip_departure = serializers.CharField(source='trip.departure', read_only=True)
     trip_arrival = serializers.CharField(source='trip.arrival', read_only=True)
     trip_driver = serializers.CharField(source='trip.driver.username', read_only=True)
@@ -49,5 +36,6 @@ class TripSerializer(serializers.ModelSerializer):
         model = Trip
         fields = [
             'id', 'driver', 'driver_email', 'departure', 'arrival', 'date',
-            'seats_available', 'price', 'meeting_point', 'bookings'
+            'seats_available', 'price', 'bookings'
         ]
+        # meeting_point supprimé
