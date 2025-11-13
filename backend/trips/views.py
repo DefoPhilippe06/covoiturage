@@ -1,11 +1,10 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
-from .models import Trip, Booking, Payment, UserProfile  # AJOUT UserProfile
+from .models import Trip, Booking, Payment, UserProfile
 from .serializers import TripSerializer, BookingSerializer, PaymentSerializer
 from django.db.models import Q
 from datetime import datetime
-from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction
 from django.template.loader import render_to_string
@@ -18,9 +17,13 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from .tasks import send_payment_email, send_booking_notification
 
 # IMPORT LOCAL
 from .stripe_config import stripe
+
+# === CELERY TASKS ===
+from .tasks import send_payment_email, send_booking_notification  # ← AJOUTÉ send_booking_notification
 
 
 class TripViewSet(viewsets.ModelViewSet):
@@ -82,23 +85,14 @@ class TripViewSet(viewsets.ModelViewSet):
             )
 
             if trip.driver.email:
-                html_message = render_to_string('emails/booking_notification.html', {
-                    'driver_name': trip.driver.username,
-                    'passenger_name': request.user.username,
-                    'trip': trip,
-                    'seats_left': trip.seats_available,
-                    'amount': total_amount,
-                    'commission': commission
-                })
-
-                send_mail(
-                    subject=f"Nouvelle réservation : {trip.departure} to {trip.arrival}",
-                    message=f"{request.user.username} a réservé une place.",
-                    html_message=html_message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[trip.driver.email],
-                    fail_silently=False,
-                )
+             send_booking_notification.delay(
+                driver_email=trip.driver.email,
+                passenger_name=request.user.username,
+                trip_id=trip.id,  # ← SEULEMENT L'ID
+                seats_left=trip.seats_available,
+                amount=float(total_amount),
+                commission=float(commission)
+            )
 
             return Response({
                 'status': 'Réservé ! Paiement en attente.',
@@ -124,7 +118,7 @@ class TripViewSet(viewsets.ModelViewSet):
                     'price_data': {
                         'currency': 'eur',
                         'product_data': {
-                            'name': f'Trajet {trip.departure} to {trip.arrival}',
+                            'name': f'Trajet {trip.departure} → {trip.arrival}',
                         },
                         'unit_amount': int(payment.amount * 100),
                     },
@@ -156,12 +150,12 @@ class PaymentCancelView(TemplateView):
     template_name = 'payment_cancel.html'
 
 
-# === WEBHOOK STRIPE : MARQUE LE PAIEMENT COMME PAYÉ ===
+# === WEBHOOK STRIPE : MARQUE LE PAIEMENT + ENVOI MAIL ASYNCHRONE ===
 @csrf_exempt
 def stripe_webhook(request):
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    endpoint_secret = 'whsec_eyAew131h9YMxabmLDNrDqHQF0Q0MNd0'  # TA CLÉ SECRÈTE
+    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET  # ← UTILISE .env
 
     try:
         event = stripe.Webhook.construct_event(
@@ -182,7 +176,15 @@ def stripe_webhook(request):
                 payment = Payment.objects.get(id=payment_id)
                 payment.paid = True
                 payment.save()
-                print(f"PAIEMENT {payment_id} MARQUÉ COMME PAYÉ !")
+
+                # === ENVOI MAIL DE CONFIRMATION EN ARRIÈRE-PLAN ===
+                send_payment_email.delay(
+                    user_email=payment.booking.passenger.email,
+                    trip_title=f"{payment.booking.trip.departure} to {payment.booking.trip.arrival}",
+                    amount=payment.amount
+                )
+
+                print(f"PAIEMENT {payment_id} MARQUÉ COMME PAYÉ + MAIL ENVOYÉ !")
             except Payment.DoesNotExist:
                 print("Payment non trouvé:", payment_id)
 
