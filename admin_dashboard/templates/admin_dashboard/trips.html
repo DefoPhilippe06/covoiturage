@@ -1,0 +1,71 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block title %}Trajets — Covoiturage{% endblock %}
+{% block page_title %}Trajets{% endblock %}
+
+{% block content %}
+<div class="card rounded-2xl border border-white/5 overflow-hidden">
+    <div class="px-6 py-4 border-b border-white/5">
+        <h2 class="font-semibold">Tous les trajets ({{ trips|length }})</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <div class="px-6 py-4 border-b border-white/5 flex flex-wrap gap-2">
+            <a href="?status=" class="text-xs px-3 py-1.5 rounded-full {% if not current_status %}bg-white/10{% else %}hover-bg{% endif %}">Tous</a>
+            <a href="?status=PUBLISHED" class="text-xs px-3 py-1.5 rounded-full {% if current_status == 'PUBLISHED' %}bg-green-500/20 text-green-400{% else %}hover-bg{% endif %}">Publiés</a>
+            <a href="?status=COMPLETED" class="text-xs px-3 py-1.5 rounded-full {% if current_status == 'COMPLETED' %}bg-blue-500/20 text-blue-400{% else %}hover-bg{% endif %}">Terminés</a>
+            <a href="?status=CANCELLED" class="text-xs px-3 py-1.5 rounded-full {% if current_status == 'CANCELLED' %}bg-red-500/20 text-red-400{% else %}hover-bg{% endif %}">Annulés</a>
+        </div>
+        <table class="w-full text-left">
+            <thead>
+                <tr class="text-sec text-sm border-b border-white/5">
+                    <th class="px-6 py-3 font-medium">Trajet</th>
+                    <th class="px-6 py-3 font-medium">Conducteur</th>
+                    <th class="px-6 py-3 font-medium">Date</th>
+                    <th class="px-6 py-3 font-medium">Places</th>
+                    <th class="px-6 py-3 font-medium">Prix</th>
+                    <th class="px-6 py-3 font-medium">Statut</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                {% for trip in trips %}
+                <tr class="hover-bg transition">
+                    <td class="px-6 py-4">
+                        <p class="font-medium">{{ trip.origin_city }} → {{ trip.destination_city }}</p>
+                        <p class="text-xs text-sec">{{ trip.vehicle }}</p>
+                    </td>
+                    <td class="px-6 py-4 text-sec">{{ trip.driver.username }}</td>
+                    <td class="px-6 py-4 text-sec text-sm">{{ trip.departure_datetime|date:"d/m/Y H:i" }}</td>
+                    <td class="px-6 py-4">{{ trip.seats_available }}/{{ trip.seats_total }}</td>
+                    <td class="px-6 py-4 font-medium">{{ trip.price_per_seat }} {{ trip.currency }}</td>
+                    <td class="px-6 py-4">
+                        <span class="text-xs px-2.5 py-1 rounded-full 
+                            {% if trip.status == 'PUBLISHED' %}bg-green-500/20 text-green-400
+                            {% elif trip.status == 'STARTED' %}bg-yellow-500/20 text-yellow-400
+                            {% elif trip.status == 'COMPLETED' %}bg-blue-500/20 text-blue-400
+                            {% elif trip.status == 'CANCELLED' %}bg-red-500/20 text-red-400
+                            {% else %}bg-gray-500/20 text-gray-400{% endif %}">
+                            {{ trip.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if trip.status != 'COMPLETED' and trip.status != 'CANCELLED' %}
+                        <form method="post" action="{% url 'admin_dashboard:cancel_trip' trip.id %}" class="inline"
+                            onsubmit="return confirm('Voulez-vous vraiment annuler ce trajet ?')">
+                            {% csrf_token %}
+                            <button type="submit" class="text-xs px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition">
+                                Annuler
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-xs text-sec">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="px-6 py-10 text-center text-sec">Aucun trajet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

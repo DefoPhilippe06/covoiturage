@@ -1,0 +1,73 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block title %}Utilisateurs — Covoiturage{% endblock %}
+{% block page_title %}Utilisateurs{% endblock %}
+
+{% block content %}
+<div class="card rounded-2xl border border-white/5 overflow-hidden">
+    <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+        <h2 class="font-semibold">Tous les utilisateurs ({{ users|length }})</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="text-sec text-sm border-b border-white/5">
+                    <th class="px-6 py-3 font-medium">Utilisateur</th>
+                    <th class="px-6 py-3 font-medium">Email</th>
+                    <th class="px-6 py-3 font-medium">Téléphone</th>
+                    <th class="px-6 py-3 font-medium">Rôles</th>
+                    <th class="px-6 py-3 font-medium">Inscrit le</th>
+                    <th class="px-6 py-3 font-medium">Statut</th>
+                    <th class="px-6 py-3 font-medium">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                {% for user in users %}
+                <tr class="hover-bg transition">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-sm font-bold">
+                                {{ user.username|first|upper }}
+                            </div>
+                            <span class="font-medium">{{ user.username }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sec">{{ user.email|default:"—" }}</td>
+                    <td class="px-6 py-4 text-sec">{{ user.phone|default:"—" }}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-1">
+                            {% if user.is_driver %}<span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">Conducteur</span>{% endif %}
+                            {% if user.is_passenger %}<span class="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">Passager</span>{% endif %}
+                            {% if user.is_staff %}<span class="text-xs px-2 py-0.5 rounded-full bg-accent/20 accent">Admin</span>{% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sec text-sm">{{ user.date_joined|date:"d/m/Y" }}</td>
+                    <td class="px-6 py-4">
+                        {% if user.is_active %}
+                        <span class="text-xs px-2.5 py-1 rounded-full bg-green-500/20 text-green-400">Actif</span>
+                        {% else %}
+                        <span class="text-xs px-2.5 py-1 rounded-full bg-red-500/20 text-red-400">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if user != request.user %}
+                        <form method="post" action="{% url 'admin_dashboard:toggle_user_active' user.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="text-xs px-3 py-1.5 rounded-full {% if user.is_active %}bg-red-500/20 text-red-400 hover:bg-red-500/30{% else %}bg-green-500/20 text-green-400 hover:bg-green-500/30{% endif %} transition">
+                                {% if user.is_active %}Désactiver{% else %}Activer{% endif %}
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-xs text-sec">Vous</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="px-6 py-10 text-center text-sec">Aucun utilisateur</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

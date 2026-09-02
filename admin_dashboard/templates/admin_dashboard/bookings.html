@@ -1,0 +1,48 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block title %}Réservations — Covoiturage{% endblock %}
+{% block page_title %}Réservations{% endblock %}
+
+{% block content %}
+<div class="card rounded-2xl border border-white/5 overflow-hidden">
+    <div class="px-6 py-4 border-b border-white/5">
+        <h2 class="font-semibold">Toutes les réservations ({{ bookings|length }})</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="text-sec text-sm border-b border-white/5">
+                    <th class="px-6 py-3 font-medium">Passager</th>
+                    <th class="px-6 py-3 font-medium">Trajet</th>
+                    <th class="px-6 py-3 font-medium">Places</th>
+                    <th class="px-6 py-3 font-medium">Montant</th>
+                    <th class="px-6 py-3 font-medium">Date</th>
+                    <th class="px-6 py-3 font-medium">Statut</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                {% for booking in bookings %}
+                <tr class="hover-bg transition">
+                    <td class="px-6 py-4 font-medium">{{ booking.passenger.username }}</td>
+                    <td class="px-6 py-4 text-sec">{{ booking.trip.origin_city }} → {{ booking.trip.destination_city }}</td>
+                    <td class="px-6 py-4">{{ booking.seats }}</td>
+                    <td class="px-6 py-4 font-medium">{{ booking.total_price }} XAF</td>
+                    <td class="px-6 py-4 text-sec text-sm">{{ booking.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="px-6 py-4">
+                        <span class="text-xs px-2.5 py-1 rounded-full 
+                            {% if booking.status == 'CONFIRMED' %}bg-green-500/20 text-green-400
+                            {% elif booking.status == 'CANCELLED' %}bg-red-500/20 text-red-400
+                            {% elif booking.status == 'COMPLETED' %}bg-blue-500/20 text-blue-400
+                            {% else %}bg-yellow-500/20 text-yellow-400{% endif %}">
+                            {{ booking.get_status_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="px-6 py-10 text-center text-sec">Aucune réservation</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
