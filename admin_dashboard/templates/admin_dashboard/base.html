@@ -1,456 +1,459 @@
 {% load static %}
 
 <!DOCTYPE html>
+
 <html lang="fr" class="h-full" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% block title %}Administration{% endblock %}</title>
+<title>{% block title %}Administration{% endblock %}</title>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
 
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        spotify: {
-                            green: '#1DB954',
-                            dark: '#121212',
-                            light: '#181818',
-                            hover: '#282828',
-                        }
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    spotify: {
+                        green: '#1DB954',
+                        dark: '#121212',
+                        light: '#181818',
+                        hover: '#282828',
                     }
                 }
             }
         }
-    </script>
+    }
+</script>
 
-    <style>
-        :root {
-            --bg-primary: #121212;
-            --bg-secondary: #181818;
-            --bg-hover: #282828;
-            --text-primary: #ffffff;
-            --text-secondary: #b3b3b3;
-            --accent: #1DB954;
-        }
+<style>
+    :root {
+        --bg-primary: #121212;
+        --bg-secondary: #181818;
+        --bg-hover: #282828;
+        --text-primary: #ffffff;
+        --text-secondary: #b3b3b3;
+        --accent: #1DB954;
+    }
 
-        [data-theme="light"] {
-            --bg-primary: #f5f5f5;
-            --bg-secondary: #ffffff;
-            --bg-hover: #eeeeee;
-            --text-primary: #181818;
-            --text-secondary: #666666;
-            --accent: #1DB954;
-        }
+    [data-theme="light"] {
+        --bg-primary: #f5f5f5;
+        --bg-secondary: #ffffff;
+        --bg-hover: #eeeeee;
+        --text-primary: #181818;
+        --text-secondary: #666666;
+        --accent: #1DB954;
+    }
 
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-        }
+    body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+    }
 
-        .sidebar {
-            background-color: var(--bg-secondary);
-        }
+    .sidebar {
+        background-color: var(--bg-secondary);
+    }
 
-        .hover-bg:hover {
-            background-color: var(--bg-hover);
-        }
+    .hover-bg:hover {
+        background-color: var(--bg-hover);
+    }
 
-        .text-secondary {
-            color: var(--text-secondary);
-        }
+    .text-secondary {
+        color: var(--text-secondary);
+    }
 
-        .accent {
-            color: var(--accent);
-        }
+    .accent {
+        color: var(--accent);
+    }
 
-        .bg-accent {
-            background-color: var(--accent);
-        }
-    </style>
+    .bg-accent {
+        background-color: var(--accent);
+    }
+</style>
 
-    {% block extra_head %}{% endblock %}
+{% block extra_head %}{% endblock %}
+
 </head>
 
 <body class="h-full">
 
-    <!-- ========================= -->
-    <!-- MOBILE OVERLAY -->
-    <!-- ========================= -->
+```
+<!-- ========================= -->
+<!-- MOBILE OVERLAY -->
+<!-- ========================= -->
 
-    <div id="sidebar-overlay"
-         class="fixed inset-0 bg-black/60 z-40 hidden lg:hidden">
-    </div>
+<div id="sidebar-overlay"
+     class="fixed inset-0 bg-black/60 z-40 hidden lg:hidden">
+</div>
 
 
-    <!-- ========================= -->
-    <!-- SIDEBAR -->
-    <!-- ========================= -->
+<!-- ========================= -->
+<!-- SIDEBAR -->
+<!-- ========================= -->
 
-    <aside id="sidebar"
-           class="sidebar fixed top-0 left-0 z-50 h-full w-64
-                  transform -translate-x-full lg:translate-x-0
-                  transition-transform duration-300
-                  border-r border-gray-800">
+<aside id="sidebar"
+       class="sidebar fixed top-0 left-0 z-50 h-full w-64
+              transform -translate-x-full lg:translate-x-0
+              transition-transform duration-300
+              border-r border-gray-800">
 
-        <!-- Logo -->
-        <div class="flex items-center justify-between h-20 px-6 border-b border-gray-800">
+    <!-- Logo -->
+    <div class="flex items-center justify-between h-20 px-6 border-b border-gray-800">
 
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-accent
-                            flex items-center justify-center
-                            text-black font-bold">
-                    C
-                </div>
-
-                <div>
-                    <h1 class="font-bold text-lg">
-                        Covoiturage
-                    </h1>
-
-                    <p class="text-xs text-secondary">
-                        Administration
-                    </p>
-                </div>
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-accent
+                        flex items-center justify-center
+                        text-black font-bold">
+                C
             </div>
 
-            <!-- Close mobile sidebar -->
-            <button id="close-sidebar"
-                    class="lg:hidden text-secondary hover:text-white">
+            <div>
+                <h1 class="font-bold text-lg">
+                    Covoiturage
+                </h1>
 
-                ✕
-
-            </button>
-
+                <p class="text-xs text-secondary">
+                    Administration
+                </p>
+            </div>
         </div>
 
+        <!-- Close mobile sidebar -->
+        <button id="close-sidebar"
+                class="lg:hidden text-secondary hover:text-white">
 
-        <!-- Navigation -->
-        <nav class="p-4 space-y-2">
+            ✕
 
-            <a href="{% url 'admin_dashboard:dashboard' %}"
-               class="flex items-center gap-3 px-4 py-3 rounded-lg
-                      hover-bg transition">
-
-                📊
-
-                <span>
-                    Tableau de bord
-                </span>
-
-            </a>
-
-
-            <a href="{% url 'admin_dashboard:users' %}"
-               class="flex items-center gap-3 px-4 py-3 rounded-lg
-                      hover-bg transition">
-
-                👥
-
-                <span>
-                    Utilisateurs
-                </span>
-
-            </a>
-
-
-            <a href="{% url 'admin_dashboard:trips' %}"
-               class="flex items-center gap-3 px-4 py-3 rounded-lg
-                      hover-bg transition">
-
-                🚗
-
-                <span>
-                    Trajets
-                </span>
-
-            </a>
-
-
-            <a href="{% url 'admin_dashboard:bookings' %}"
-               class="flex items-center gap-3 px-4 py-3 rounded-lg
-                      hover-bg transition">
-
-                🎫
-
-                <span>
-                    Réservations
-                </span>
-
-            </a>
-
-        </nav>
-
-
-        <!-- Profile -->
-        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-
-            <div class="flex items-center gap-3 mb-4">
-
-                <div class="w-10 h-10 rounded-full bg-gray-700
-                            flex items-center justify-center">
-
-                    👤
-
-                </div>
-
-                <div class="flex-1 min-w-0">
-
-                    <p class="font-medium truncate">
-                        {{ request.user.username }}
-                    </p>
-
-                    <p class="text-xs text-secondary">
-                        Administrateur
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <a href="{% url 'admin_dashboard:logout' %}"
-               class="flex items-center gap-3 px-4 py-3 rounded-lg
-                      hover-bg transition text-red-400">
-
-                🚪
-
-                <span>
-                    Déconnexion
-                </span>
-
-            </a>
-
-        </div>
-
-    </aside>
-
-
-    <!-- ========================= -->
-    <!-- MAIN CONTENT -->
-    <!-- ========================= -->
-
-    <div class="lg:ml-64 min-h-full">
-
-
-        <!-- ========================= -->
-        <!-- HEADER -->
-        <!-- ========================= -->
-
-        <header class="h-20 flex items-center justify-between
-                       px-4 md:px-8
-                       border-b border-gray-800
-                       bg-[var(--bg-secondary)]">
-
-            <div class="flex items-center gap-4">
-
-                <!-- Mobile menu -->
-                <button id="mobile-menu-btn"
-                        class="lg:hidden text-2xl">
-
-                    ☰
-
-                </button>
-
-
-                <div>
-
-                    <h2 class="text-xl font-bold">
-                        {% block page_title %}
-                        Administration
-                        {% endblock %}
-                    </h2>
-
-                </div>
-
-            </div>
-
-
-            <!-- Theme toggle -->
-            <button id="theme-toggle"
-                    class="w-10 h-10 rounded-full hover-bg
-                           flex items-center justify-center
-                           transition">
-
-                <span id="icon-sun">
-                    ☀️
-                </span>
-
-                <span id="icon-moon" class="hidden">
-                    🌙
-                </span>
-
-            </button>
-
-        </header>
-
-
-        <!-- ========================= -->
-        <!-- PAGE CONTENT -->
-        <!-- ========================= -->
-
-        <main class="p-4 md:p-8">
-
-            {% block content %}
-            {% endblock %}
-
-        </main>
+        </button>
 
     </div>
 
 
+    <!-- Navigation -->
+    <nav class="p-4 space-y-2">
+
+        <a href="{% url 'admin_dashboard:dashboard' %}"
+           class="flex items-center gap-3 px-4 py-3 rounded-lg
+                  hover-bg transition">
+
+            📊
+
+            <span>
+                Tableau de bord
+            </span>
+
+        </a>
+
+
+        <a href="{% url 'admin_dashboard:users' %}"
+           class="flex items-center gap-3 px-4 py-3 rounded-lg
+                  hover-bg transition">
+
+            👥
+
+            <span>
+                Utilisateurs
+            </span>
+
+        </a>
+
+
+        <a href="{% url 'admin_dashboard:trips' %}"
+           class="flex items-center gap-3 px-4 py-3 rounded-lg
+                  hover-bg transition">
+
+            🚗
+
+            <span>
+                Trajets
+            </span>
+
+        </a>
+
+
+        <a href="{% url 'admin_dashboard:bookings' %}"
+           class="flex items-center gap-3 px-4 py-3 rounded-lg
+                  hover-bg transition">
+
+            🎫
+
+            <span>
+                Réservations
+            </span>
+
+        </a>
+
+    </nav>
+
+
+    <!-- Profile -->
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
+
+        <div class="flex items-center gap-3 mb-4">
+
+            {% if request.user.avatar %}
+            <img src="{{ request.user.avatar.url }}" class="w-10 h-10 rounded-full object-cover">
+            {% else %}
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center font-bold text-sm">
+                {{ request.user.username|first|upper }}
+            </div>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+
+                <p class="font-medium truncate">
+                    {{ request.user.username }}
+                </p>
+
+                <p class="text-xs text-secondary">
+                    Administrateur
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <a href="{% url 'admin_dashboard:logout' %}"
+           class="flex items-center gap-3 px-4 py-3 rounded-lg
+                  hover-bg transition text-red-400">
+
+            🚪
+
+            <span>
+                Déconnexion
+            </span>
+
+        </a>
+
+    </div>
+
+</aside>
+
+
+<!-- ========================= -->
+<!-- MAIN CONTENT -->
+<!-- ========================= -->
+
+<div class="lg:ml-64 min-h-full">
+
+
     <!-- ========================= -->
-    <!-- THEME JAVASCRIPT -->
+    <!-- HEADER -->
     <!-- ========================= -->
 
-    <script>
+    <header class="h-20 flex items-center justify-between
+                   px-4 md:px-8
+                   border-b border-gray-800
+                   bg-[var(--bg-secondary)]">
 
-        const html = document.documentElement;
+        <div class="flex items-center gap-4">
 
-        const toggle = document.getElementById('theme-toggle');
+            <!-- Mobile menu -->
+            <button id="mobile-menu-btn"
+                    class="lg:hidden text-2xl">
 
-        const iconSun = document.getElementById('icon-sun');
+                ☰
 
-        const iconMoon = document.getElementById('icon-moon');
+            </button>
 
 
-        function setTheme(theme) {
+            <div>
 
-            html.setAttribute('data-theme', theme);
+                <h2 class="text-xl font-bold">
+                    {% block page_title %}
+                    Administration
+                    {% endblock %}
+                </h2>
 
-            html.classList.toggle(
-                'dark',
-                theme === 'dark'
+            </div>
+
+        </div>
+
+
+        <!-- Theme toggle -->
+        <button id="theme-toggle"
+                class="w-10 h-10 rounded-full hover-bg
+                       flex items-center justify-center
+                       transition">
+
+            <span id="icon-sun">
+                ☀️
+            </span>
+
+            <span id="icon-moon" class="hidden">
+                🌙
+            </span>
+
+        </button>
+
+    </header>
+
+
+    <!-- ========================= -->
+    <!-- PAGE CONTENT -->
+    <!-- ========================= -->
+
+    <main class="p-4 md:p-8">
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- THEME JAVASCRIPT -->
+<!-- ========================= -->
+
+<script>
+
+    const html = document.documentElement;
+
+    const toggle = document.getElementById('theme-toggle');
+
+    const iconSun = document.getElementById('icon-sun');
+
+    const iconMoon = document.getElementById('icon-moon');
+
+
+    function setTheme(theme) {
+
+        html.setAttribute('data-theme', theme);
+
+        html.classList.toggle(
+            'dark',
+            theme === 'dark'
+        );
+
+        iconSun.classList.toggle(
+            'hidden',
+            theme === 'dark'
+        );
+
+        iconMoon.classList.toggle(
+            'hidden',
+            theme === 'light'
+        );
+
+        localStorage.setItem(
+            'theme',
+            theme
+        );
+    }
+
+
+    const saved =
+        localStorage.getItem('theme') || 'dark';
+
+
+    setTheme(saved);
+
+
+    toggle.addEventListener(
+        'click',
+        () => {
+
+            const current =
+                html.getAttribute('data-theme');
+
+            setTheme(
+                current === 'dark'
+                    ? 'light'
+                    : 'dark'
             );
 
-            iconSun.classList.toggle(
-                'hidden',
-                theme === 'dark'
-            );
-
-            iconMoon.classList.toggle(
-                'hidden',
-                theme === 'light'
-            );
-
-            localStorage.setItem(
-                'theme',
-                theme
-            );
         }
+    );
+
+</script>
 
 
-        const saved =
-            localStorage.getItem('theme') || 'dark';
+<!-- ========================= -->
+<!-- CHART.JS -->
+<!-- ========================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 
-        setTheme(saved);
+<!-- ========================= -->
+<!-- JAVASCRIPT DES PAGES -->
+<!-- ========================= -->
+
+{% block extra_js %}
+{% endblock %}
 
 
-        toggle.addEventListener(
-            'click',
-            () => {
+<!-- ========================= -->
+<!-- MOBILE SIDEBAR -->
+<!-- ========================= -->
 
-                const current =
-                    html.getAttribute('data-theme');
+<script>
 
-                setTheme(
-                    current === 'dark'
-                        ? 'light'
-                        : 'dark'
-                );
+    const sidebar =
+        document.getElementById('sidebar');
 
-            }
+    const overlay =
+        document.getElementById('sidebar-overlay');
+
+    const openBtn =
+        document.getElementById('mobile-menu-btn');
+
+    const closeBtn =
+        document.getElementById('close-sidebar');
+
+
+    function openSidebar() {
+
+        sidebar.classList.remove(
+            '-translate-x-full'
         );
 
-    </script>
-
-
-    <!-- ========================= -->
-    <!-- CHART.JS -->
-    <!-- ========================= -->
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-
-    <!-- ========================= -->
-    <!-- JAVASCRIPT DES PAGES -->
-    <!-- ========================= -->
-
-    {% block extra_js %}
-    {% endblock %}
-
-
-    <!-- ========================= -->
-    <!-- MOBILE SIDEBAR -->
-    <!-- ========================= -->
-
-    <script>
-
-        const sidebar =
-            document.getElementById('sidebar');
-
-        const overlay =
-            document.getElementById('sidebar-overlay');
-
-        const openBtn =
-            document.getElementById('mobile-menu-btn');
-
-        const closeBtn =
-            document.getElementById('close-sidebar');
-
-
-        function openSidebar() {
-
-            sidebar.classList.remove(
-                '-translate-x-full'
-            );
-
-            overlay.classList.remove(
-                'hidden'
-            );
-
-        }
-
-
-        function closeSidebar() {
-
-            sidebar.classList.add(
-                '-translate-x-full'
-            );
-
-            overlay.classList.add(
-                'hidden'
-            );
-
-        }
-
-
-        openBtn?.addEventListener(
-            'click',
-            openSidebar
+        overlay.classList.remove(
+            'hidden'
         );
 
+    }
 
-        closeBtn?.addEventListener(
-            'click',
-            closeSidebar
+
+    function closeSidebar() {
+
+        sidebar.classList.add(
+            '-translate-x-full'
         );
 
-
-        overlay?.addEventListener(
-            'click',
-            closeSidebar
+        overlay.classList.add(
+            'hidden'
         );
 
-    </script>
+    }
+
+
+    openBtn?.addEventListener(
+        'click',
+        openSidebar
+    );
+
+
+    closeBtn?.addEventListener(
+        'click',
+        closeSidebar
+    );
+
+
+    overlay?.addEventListener(
+        'click',
+        closeSidebar
+    );
+
+</script>
 
 </body>
-
 </html>

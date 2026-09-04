@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "payments",
     "messaging",
     "drf_spectacular",
+    "frontend",
 ]
 
 MIDDLEWARE = [

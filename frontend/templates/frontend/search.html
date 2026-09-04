@@ -1,0 +1,57 @@
+{% extends "frontend/base.html" %}
+{% block title %}Rechercher un trajet — Covoiturage{% endblock %}
+
+{% block content %}
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
+    <h1 class="text-3xl font-bold mb-8">Rechercher un trajet</h1>
+
+    <form method="get" class="card rounded-2xl p-5 mb-10">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-xs text-muted mb-1.5 font-medium">Départ</label>
+                <input type="text" name="origin" value="{{ origin }}" placeholder="Ville de départ"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-muted mb-1.5 font-medium">Destination</label>
+                <input type="text" name="destination" value="{{ destination }}" placeholder="Ville d'arrivée"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-muted mb-1.5 font-medium">Date</label>
+                <input type="date" name="date" value="{{ date }}"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full py-3 rounded-xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition">
+                    Rechercher
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <p class="text-muted text-sm mb-6">{{ trips|length }} trajet{{ trips|length|pluralize }} trouvé{{ trips|length|pluralize }}</p>
+
+    <div class="space-y-4">
+        {% for trip in trips %}
+        <a href="{% url 'frontend:trip_detail' trip.pk %}" class="card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-brand-500/30 transition group">
+            <div class="flex-1">
+                <p class="font-semibold text-lg group-hover:text-brand-500 transition">{{ trip.origin_city }} → {{ trip.destination_city }}</p>
+                <p class="text-sm text-muted mt-1">{{ trip.departure_datetime|date:"D d M Y · H:i" }} · {{ trip.driver.username }} · ★ {{ trip.driver.rating_avg|default:"—" }}</p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-right">
+                    <p class="text-xl font-bold text-brand-500">{{ trip.price_per_seat|floatformat:0 }} <span class="text-sm font-normal">{{ trip.currency }}</span></p>
+                    <p class="text-xs text-muted">{{ trip.seats_available }} place{{ trip.seats_available|pluralize }}</p>
+                </div>
+                <span class="hidden sm:inline-block px-4 py-2 rounded-full bg-brand-500/15 text-brand-500 text-sm font-medium">Voir →</span>
+            </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-20 text-muted">
+            <p class="text-lg">Aucun trajet ne correspond à votre recherche.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,839 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Covoiturage{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            400: '#34d399',
+                            500: '#1DB954',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [data-theme="dark"] {
+            --bg: #0a0a0a;
+            --bg-card: #141414;
+            --bg-elevated: #1a1a1a;
+            --border: rgba(255,255,255,0.06);
+            --text: #f5f5f5;
+            --text-muted: #a3a3a3;
+        }
+        [data-theme="light"] {
+            --bg: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-elevated: #f1f5f9;
+            --border: rgba(0,0,0,0.06);
+            --text: #0f172a;
+            --text-muted: #64748b;
+        }
+        body { background: var(--bg); color: var(--text); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); }
+        .elevated { background: var(--bg-elevated); }
+        .text-muted { color: var(--text-muted); }
+        .border-soft { border-color: var(--border); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Navbar -->
+
+<header class="sticky top-0 z-50 backdrop-blur-xl bg-black/70 border-b border-soft">
+    <div class="w-full px-6 sm:px-10 lg:px-16 h-16 flex items-center justify-between">
+
+    <a href="{% url 'frontend:home' %}" class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-full bg-brand-500 flex items-center justify-center font-bold text-black text-lg">C</div>
+        <span class="text-lg font-bold tracking-tight hidden sm:block">Covoiturage</span>
+    </a>
+
+    <nav class="hidden md:flex items-center gap-1">
+        <a href="{% url 'frontend:home' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Accueil</a>
+        <a href="{% url 'frontend:search' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Rechercher</a>
+
+        {% if user.is_authenticated %}
+        <a href="{% url 'frontend:my_bookings' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Mes réservations</a>
+        <a href="{% url 'frontend:my_trips' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Mes trajets</a>
+        <a href="{% url 'frontend:publish' %}" class="ml-2 px-5 py-2 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">Publier</a>
+        {% endif %}
+    </nav>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+
+        <!-- Toggle thème -->
+
+        <button id="theme-toggle" class="p-2 rounded-full hover:bg-white/5 transition">
+            <svg id="icon-moon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+            </svg>
+
+            <svg id="icon-sun" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a8 8 0 11-10.586 10.586z" clip-rule="evenodd"/>
+            </svg>
+        </button>
+
+        {% if user.is_authenticated %}
+
+        <!-- Cloche notifications -->
+
+        <button onclick="openNotifications()" class="relative p-2 rounded-full hover:bg-white/5 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+
+            <span id="notif-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+        </button>
+
+        <!-- Profil -->
+
+        <button onclick="openProfileModal()" class="flex items-center gap-2 hover:bg-white/5 rounded-full p-1 pr-2 transition">
+            {% if user.avatar %}
+            <img src="{{ user.avatar.url }}" class="w-8 h-8 rounded-full object-cover border border-white/10">
+            {% else %}
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center text-sm font-bold">
+                {{ user.username|first|upper }}
+            </div>
+            {% endif %}
+
+            <span class="text-sm font-medium hidden sm:block">{{ user.username }}</span>
+        </button>
+
+        {% else %}
+
+        <a href="{% url 'frontend:login' %}" class="px-5 py-2 rounded-full border border-white/10 text-sm font-medium hover:bg-white/5 transition">
+            Connexion
+        </a>
+
+        {% endif %}
+
+    </div>
+</div>
+</header>
+
+<!-- Contenu -->
+
+<main class="flex-1">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- Footer -->
+
+<footer class="border-t border-soft py-10 mt-auto">
+    <div class="w-full px-6 sm:px-10 lg:px-16 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center font-bold text-black text-sm">C</div>
+            <span class="font-semibold">Covoiturage</span>
+        </div>
+    <p class="text-sm text-muted">
+        © 2026 Covoiturage. Plateforme de mobilité.
+    </p>
+</div>
+</footer>
+
+<!-- Gestion du thème -->
+
+<script>
+    const html = document.documentElement;
+    const toggle = document.getElementById('theme-toggle');
+    const iconSun = document.getElementById('icon-sun');
+    const iconMoon = document.getElementById('icon-moon');
+
+    function setTheme(t) {
+        html.setAttribute('data-theme', t);
+        html.classList.toggle('dark', t === 'dark');
+
+        iconSun.classList.toggle('hidden', t === 'dark');
+        iconMoon.classList.toggle('hidden', t === 'light');
+
+        localStorage.setItem('theme', t);
+    }
+
+    setTheme(localStorage.getItem('theme') || 'dark');
+
+    toggle.addEventListener('click', () => {
+        setTheme(
+            html.getAttribute('data-theme') === 'dark'
+                ? 'light'
+                : 'dark'
+        );
+    });
+</script>
+
+<!-- MODAL générique -->
+
+<div id="modal-overlay" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+<div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal()"></div>
+
+<div id="modal-content" class="relative card rounded-2xl w-full max-w-md p-6 sm:p-8 shadow-2xl transform scale-95 opacity-0 transition-all duration-200">
+    <!-- contenu injecté dynamiquement -->
+</div>
+</div>
+
+<script>
+function openModal(html) {
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+
+    content.innerHTML = html;
+
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+
+    requestAnimationFrame(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+    });
+}
+
+function closeModal() {
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+
+    content.classList.add('scale-95', 'opacity-0');
+    content.classList.remove('scale-100', 'opacity-100');
+
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+        content.innerHTML = '';
+    }, 200);
+}
+</script>
+
+<!-- MODAL PROFIL -->
+
+<script>
+function openProfileModal() {
+    openModal(`
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold">Mon profil</h2>
+
+            <button onclick="closeModal()" class="p-1.5 rounded-full hover:bg-white/10">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 20 20">
+                    <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="flex flex-col items-center mb-6">
+
+            {% if user.avatar %}
+
+            <img id="preview-avatar"
+                 src="{{ user.avatar.url }}"
+                 class="w-24 h-24 rounded-full object-cover border-2 border-brand-500/30">
+
+            {% else %}
+
+            <div id="preview-avatar"
+                 class="w-24 h-24 rounded-full bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center text-3xl font-bold">
+                {{ user.username|first|upper }}
+            </div>
+
+            {% endif %}
+
+            <label class="mt-3 text-sm text-brand-500 cursor-pointer hover:underline">
+                Changer la photo
+
+                <input type="file"
+                       id="avatar-input"
+                       accept="image/*"
+                       class="hidden"
+                       onchange="previewAvatar(this)">
+            </label>
+        </div>
+
+        <div class="space-y-4">
+
+            <div>
+                <label class="block text-sm text-muted mb-1.5">
+                    Prénom
+                </label>
+
+                <input id="prof-first"
+                       type="text"
+                       value="{{ user.first_name }}"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm text-muted mb-1.5">
+                    Nom
+                </label>
+
+                <input id="prof-last"
+                       type="text"
+                       value="{{ user.last_name }}"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm text-muted mb-1.5">
+                    Téléphone
+                </label>
+
+                <input id="prof-phone"
+                       type="text"
+                       value="{{ user.phone|default:'' }}"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+
+            <button onclick="logout()"
+                    class="w-full py-3 rounded-xl border border-red-500/30 text-red-400 font-medium hover:bg-red-500/10 transition">
+                Se déconnecter
+            </button>
+
+            <button onclick="saveProfile()"
+                    class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
+                Enregistrer
+            </button>
+
+        </div>
+    `);
+}
+
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+
+        const reader = new FileReader();
+
+        reader.onload = e => {
+
+            const el = document.getElementById('preview-avatar');
+
+            if (el.tagName === 'IMG') {
+
+                el.src = e.target.result;
+
+            } else {
+
+                el.outerHTML = `
+                    <img id="preview-avatar"
+                         src="${e.target.result}"
+                         class="w-24 h-24 rounded-full object-cover border-2 border-brand-500/30">
+                `;
+            }
+        };
+
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function saveProfile() {
+
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+        alert('Token manquant — reconnectez-vous');
+        return;
+    }
+
+    const formData = new FormData();
+
+    formData.append(
+        'first_name',
+        document.getElementById('prof-first').value
+    );
+
+    formData.append(
+        'last_name',
+        document.getElementById('prof-last').value
+    );
+
+    formData.append(
+        'phone',
+        document.getElementById('prof-phone').value
+    );
+
+    const fileInput = document.getElementById('avatar-input');
+
+    if (fileInput && fileInput.files[0]) {
+        formData.append('avatar', fileInput.files[0]);
+    }
+
+    const res = await fetch('/api/auth/profile/', {
+        method: 'PATCH',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        },
+        body: formData
+    });
+
+    if (res.ok) {
+
+        closeModal();
+        location.reload();
+
+    } else {
+
+        const err = await res.json();
+        alert(JSON.stringify(err));
+    }
+}
+</script>
+
+<!-- MODAL PUBLICATION -->
+
+<script>
+async function openPublishModal() {
+
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+        alert('Connectez-vous d’abord');
+        window.location.href = '/login/';
+        return;
+    }
+
+    // Charger les véhicules de l'utilisateur
+
+    let vehiclesOptions = '<option value="">Chargement...</option>';
+
+    try {
+
+        const res = await fetch('/api/vehicles/', {
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        const data = await res.json();
+        const vehicles = data.results || data;
+
+        if (vehicles.length === 0) {
+
+            vehiclesOptions =
+                '<option value="">Aucun véhicule — créez-en un d’abord</option>';
+
+        } else {
+
+            vehiclesOptions = vehicles.map(v =>
+                `<option value="${v.id}">${v.brand} ${v.model} (${v.plate_number})</option>`
+            ).join('');
+        }
+
+    } catch (e) {
+
+        vehiclesOptions =
+            '<option value="">Erreur de chargement</option>';
+    }
+
+    openModal(`
+        <div class="flex items-center justify-between mb-6">
+
+            <h2 class="text-xl font-bold">
+                Nouveau trajet
+            </h2>
+
+            <button onclick="closeModal()"
+                    class="p-1.5 rounded-full hover:bg-white/10">
+
+                <svg class="w-5 h-5"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 20 20">
+                    <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+
+            </button>
+        </div>
+
+        <div id="pub-error"
+             class="hidden mb-4 p-3 rounded-lg bg-red-500/20 text-red-400 text-sm">
+        </div>
+
+        <div class="space-y-4">
+
+            <div>
+                <label class="block text-sm text-muted mb-1.5">
+                    Départ *
+                </label>
+
+                <input id="pub-origin"
+                       type="text"
+                       placeholder="Yaoundé"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm text-muted mb-1.5">
+                    Destination *
+                </label>
+
+                <input id="pub-dest"
+                       type="text"
+                       placeholder="Douala"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">
+                        Date & heure *
+                    </label>
+
+                    <input id="pub-datetime"
+                           type="datetime-local"
+                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">
+                        Places *
+                    </label>
+
+                    <input id="pub-seats"
+                           type="number"
+                           min="1"
+                           max="8"
+                           value="3"
+                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+
+            </div>
+
+            <div>
+                <label class="block text-sm text-muted mb-1.5">
+                    Prix / place (XAF) *
+                </label>
+
+                <input id="pub-price"
+                       type="number"
+                       min="0"
+                       placeholder="5000"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm text-muted mb-1.5">
+                    Véhicule *
+                </label>
+
+                <select id="pub-vehicle"
+                        class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+
+                    ${vehiclesOptions}
+
+                </select>
+            </div>
+
+            <button onclick="submitPublish()"
+                    class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition mt-2">
+
+                Publier
+
+            </button>
+
+        </div>
+    `);
+}
+
+async function submitPublish() {
+
+    const errorEl = document.getElementById('pub-error');
+
+    errorEl.classList.add('hidden');
+
+    const origin =
+        document.getElementById('pub-origin').value.trim();
+
+    const dest =
+        document.getElementById('pub-dest').value.trim();
+
+    const datetime =
+        document.getElementById('pub-datetime').value;
+
+    const seats =
+        document.getElementById('pub-seats').value;
+
+    const price =
+        document.getElementById('pub-price').value;
+
+    const vehicle =
+        document.getElementById('pub-vehicle').value;
+
+    // Validation côté client
+
+    if (!origin || !dest || !datetime || !seats || !price || !vehicle) {
+
+        errorEl.textContent =
+            'Veuillez remplir tous les champs obligatoires.';
+
+        errorEl.classList.remove('hidden');
+
+        return;
+    }
+
+    const token =
+        localStorage.getItem('access_token');
+
+    const body = {
+
+        vehicle: parseInt(vehicle),
+
+        origin_city: origin,
+
+        destination_city: dest,
+
+        departure_datetime: datetime,
+
+        seats_total: parseInt(seats),
+
+        price_per_seat: price
+    };
+
+    const res = await fetch('/api/trips/', {
+
+        method: 'POST',
+
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+
+        closeModal();
+
+        openModal(`
+            <div class="text-center py-4">
+
+                <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
+
+                    <svg class="w-8 h-8 text-brand-500"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 20 20">
+
+                        <path d="M5 13l4 4L19 7"/>
+
+                    </svg>
+
+                </div>
+
+                <h2 class="text-xl font-bold mb-2">
+                    Trajet publié !
+                </h2>
+
+                <button onclick="closeModal(); location.href='/my-trips/'"
+                        class="mt-4 px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
+
+                    Voir mes trajets
+
+                </button>
+
+            </div>
+        `);
+
+    } else {
+
+        // Messages d'erreur plus clairs
+
+        let msg =
+            'Erreur lors de la publication.';
+
+        if (data.vehicle) {
+
+            msg =
+                'Véhicule invalide. Choisissez un de vos véhicules.';
+
+        } else if (data.destination_city) {
+
+            msg =
+                'La destination est obligatoire.';
+
+        } else if (data.origin_city) {
+
+            msg =
+                'Le départ est obligatoire.';
+
+        } else if (typeof data === 'object') {
+
+            msg =
+                Object.values(data).flat().join(' ');
+        }
+
+        errorEl.textContent = msg;
+
+        errorEl.classList.remove('hidden');
+    }
+}
+</script>
+
+<!-- NOTIFICATIONS -->
+
+<script>
+async function openNotifications() {
+
+    const token = localStorage.getItem('access_token');
+
+    if (!token) return;
+
+    let listHtml =
+        '<p class="text-muted text-sm text-center py-6">Chargement...</p>';
+
+    openModal(`
+        <div class="flex items-center justify-between mb-5">
+
+            <h2 class="text-xl font-bold">
+                Notifications
+            </h2>
+
+            <button onclick="closeModal()"
+                    class="p-1.5 rounded-full hover:bg-white/10">
+
+                <svg class="w-5 h-5"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 20 20">
+
+                    <path d="M6 18L18 6M6 6l12 12"/>
+
+                </svg>
+
+            </button>
+        </div>
+
+        <div id="notif-list">
+            ${listHtml}
+        </div>
+    `);
+
+    try {
+
+        const res = await fetch('/api/notifications/', {
+
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        const data = await res.json();
+
+        const notifs =
+            data.results || data;
+
+        if (notifs.length === 0) {
+
+            document.getElementById('notif-list').innerHTML =
+                '<p class="text-muted text-sm text-center py-8">Aucune notification</p>';
+
+        } else {
+
+            document.getElementById('notif-list').innerHTML =
+                notifs.map(n => `
+
+                    <div class="py-3 border-b border-soft last:border-0 ${n.is_read ? 'opacity-60' : ''}">
+
+                        <p class="font-medium text-sm">
+                            ${n.title}
+                        </p>
+
+                        <p class="text-xs text-muted mt-0.5">
+                            ${n.message}
+                        </p>
+
+                    </div>
+
+                `).join('');
+
+            // Marquer tout comme lu
+
+            fetch('/api/notifications/mark_all_read/', {
+
+                method: 'POST',
+
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+
+            });
+
+            document.getElementById('notif-badge')?.classList.add('hidden');
+        }
+
+    } catch (e) {
+
+        document.getElementById('notif-list').innerHTML =
+            '<p class="text-red-400 text-sm text-center py-6">Erreur de chargement</p>';
+    }
+}
+
+
+// Badge au chargement
+
+document.addEventListener('DOMContentLoaded', async () => {
+
+    const token =
+        localStorage.getItem('access_token');
+
+    if (!token) return;
+
+    try {
+
+        const res = await fetch('/api/notifications/', {
+
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+
+        });
+
+        const data = await res.json();
+
+        const notifs =
+            data.results || data;
+
+        const unread =
+            notifs.filter(n => !n.is_read).length;
+
+        if (unread > 0) {
+
+            document
+                .getElementById('notif-badge')
+                ?.classList.remove('hidden');
+        }
+
+    } catch (e) {}
+});
+</script>
+
+<!-- Déconnexion -->
+
+<script>
+function logout() {
+
+    localStorage.removeItem('access_token');
+
+    localStorage.removeItem('refresh_token');
+
+    window.location.href = '/login/';
+}
+</script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

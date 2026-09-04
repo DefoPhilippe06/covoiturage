@@ -1,0 +1,33 @@
+{% extends "frontend/base.html" %}
+{% block title %}Mes trajets — Covoiturage{% endblock %}
+
+{% block content %}
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold">Mes trajets</h1>
+        <a href="{% url 'frontend:publish' %}" class="px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">+ Publier</a>
+    </div>
+
+    <div class="space-y-4">
+        {% for trip in trips %}
+        <a href="{% url 'frontend:trip_detail' trip.pk %}" class="card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-brand-500/30 transition">
+            <div>
+                <p class="font-semibold text-lg">{{ trip.origin_city }} → {{ trip.destination_city }}</p>
+                <p class="text-sm text-muted mt-1">{{ trip.departure_datetime|date:"d M Y · H:i" }} · {{ trip.seats_available }}/{{ trip.seats_total }} places</p>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-full
+                {% if trip.status == 'PUBLISHED' %}bg-green-500/20 text-green-400
+                {% elif trip.status == 'COMPLETED' %}bg-blue-500/20 text-blue-400
+                {% elif trip.status == 'CANCELLED' %}bg-red-500/20 text-red-400
+                {% else %}bg-gray-500/20 text-gray-400{% endif %}">
+                {{ trip.get_status_display }}
+            </span>
+        </a>
+        {% empty %}
+        <div class="text-center py-20 text-muted">
+            <p class="text-lg">Vous n'avez publié aucun trajet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
