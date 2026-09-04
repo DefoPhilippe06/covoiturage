@@ -1,0 +1,116 @@
+{% extends "frontend/base.html" %}
+{% block title %}Mes réservations — Covoiturage{% endblock %}
+
+{% block content %}
+
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
+    <h1 class="text-3xl font-bold mb-8">Mes réservations</h1>
+<div class="space-y-4">
+    {% for booking in bookings %}
+    <div class="card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <p class="font-semibold text-lg">
+                {{ booking.trip.origin_city }} → {{ booking.trip.destination_city }}
+            </p>
+            <p class="text-sm text-muted mt-1">
+                {{ booking.trip.departure_datetime|date:"d M Y · H:i" }}
+                · {{ booking.seats }} place{{ booking.seats|pluralize }}
+            </p>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <p class="font-bold">
+                {{ booking.total_price|floatformat:0 }} XAF
+            </p>
+
+            <span class="text-xs px-2.5 py-1 rounded-full
+                {% if booking.status == 'CONFIRMED' %}
+                    bg-green-500/20 text-green-400
+                {% elif booking.status == 'CANCELLED' %}
+                    bg-red-500/20 text-red-400
+                {% else %}
+                    bg-yellow-500/20 text-yellow-400
+                {% endif %}">
+                {{ booking.get_status_display }}
+            </span>
+
+            {% if booking.status == 'CONFIRMED' %}
+            <button onclick="cancelBooking({{ booking.id }})"
+                    class="text-xs px-3 py-1.5 rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25 transition">
+                Annuler
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% empty %}
+    <div class="text-center py-20 text-muted">
+        <p class="text-lg">Aucune réservation.</p>
+        <a href="{% url 'frontend:search' %}"
+           class="inline-block mt-4 text-brand-500 font-medium hover:underline">
+            Rechercher un trajet →
+        </a>
+    </div>
+    {% endfor %}
+</div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+function cancelBooking(id) {
+    openModal(`
+        <div class="text-center py-2">
+            <h2 class="text-xl font-bold mb-2">Annuler la réservation ?</h2>
+
+            <p class="text-muted text-sm mb-6">
+                Cette action est irréversible.
+            </p>
+
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal()"
+                        class="px-5 py-2.5 rounded-full border border-soft text-sm font-medium hover:bg-white/5">
+                    Non
+                </button>
+
+                <button onclick="confirmCancel(${id})"
+                        class="px-5 py-2.5 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-400">
+                    Oui, annuler
+                </button>
+            </div>
+        </div>
+    `);
+}
+
+async function confirmCancel(id) {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+        alert('Session expirée. Veuillez vous reconnecter.');
+        window.location.href = '/login/';
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/bookings/${id}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        if (res.ok) {
+            closeModal();
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert(err.detail || 'Erreur lors de l’annulation.');
+        }
+    } catch (error) {
+        alert('Erreur de connexion au serveur.');
+    }
+}
+</script>
+
+{% endblock %}

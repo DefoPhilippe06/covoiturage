@@ -8,6 +8,7 @@ class User(AbstractUser):
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     is_verified_email = models.BooleanField(default=False)
     is_verified_phone = models.BooleanField(default=False)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)  # ← nouveau
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

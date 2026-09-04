@@ -1,0 +1,96 @@
+{% extends "frontend/base.html" %}
+{% block title %}Publier un trajet — Covoiturage{% endblock %}
+
+{% block content %}
+
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
+    <h1 class="text-3xl font-bold mb-2">Publier un trajet</h1>
+    <p class="text-muted mb-8">Proposez vos places disponibles.</p>
+
+<div class="card rounded-2xl p-6 sm:p-8 space-y-5">
+    <button onclick="openPublishModal()"
+            class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
+        Publier un trajet
+    </button>
+</div>
+
+<script>
+function openPublishModal() {
+    openModal(`
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold">Nouveau trajet</h2>
+            <button onclick="closeModal()" class="p-1.5 rounded-full hover:bg-white/10">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm text-muted mb-1.5">Départ</label>
+                <input id="pub-origin" type="text" placeholder="Yaoundé" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-sm text-muted mb-1.5">Destination</label>
+                <input id="pub-dest" type="text" placeholder="Douala" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Date & heure</label>
+                    <input id="pub-datetime" type="datetime-local" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Places</label>
+                    <input id="pub-seats" type="number" min="1" max="8" value="3" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm text-muted mb-1.5">Prix / place (XAF)</label>
+                <input id="pub-price" type="number" min="0" placeholder="5000" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-sm text-muted mb-1.5">ID Véhicule</label>
+                <input id="pub-vehicle" type="number" placeholder="1" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+            </div>
+            <button onclick="submitPublish()" class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition mt-2">
+                Publier
+            </button>
+        </div>
+    `);
+}
+
+async function submitPublish() {
+    const token = localStorage.getItem('access_token');
+    if (!token) { alert('Connectez-vous d’abord'); return; }
+    const body = {
+        vehicle: parseInt(document.getElementById('pub-vehicle').value),
+        origin_city: document.getElementById('pub-origin').value,
+        destination_city: document.getElementById('pub-dest').value,
+        departure_datetime: document.getElementById('pub-datetime').value,
+        seats_total: parseInt(document.getElementById('pub-seats').value),
+        price_per_seat: document.getElementById('pub-price').value
+    };
+    const res = await fetch('/api/trips/', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (res.ok) {
+        closeModal();
+        openModal(`
+            <div class="text-center py-4">
+                <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h2 class="text-xl font-bold mb-2">Trajet publié !</h2>
+                <button onclick="closeModal(); location.href='/my-trips/'" class="mt-4 px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
+                    Voir mes trajets
+                </button>
+            </div>
+        `);
+    } else {
+        alert(JSON.stringify(data));
+    }
+}
+</script>
+</section>
+{% endblock %}

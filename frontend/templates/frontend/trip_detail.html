@@ -1,0 +1,121 @@
+{% extends "frontend/base.html" %}
+{% block title %}{{ trip.origin_city }} → {{ trip.destination_city }} — Covoiturage{% endblock %}
+
+{% block content %}
+
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
+    <a href="{% url 'frontend:search' %}" class="text-sm text-muted hover:text-brand-500 transition mb-6 inline-block">← Retour</a>
+
+<div class="card rounded-2xl p-6 sm:p-8">
+    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold">{{ trip.origin_city }} → {{ trip.destination_city }}</h1>
+            <p class="text-muted mt-2">{{ trip.departure_datetime|date:"l d F Y · H:i" }}</p>
+        </div>
+        <div class="text-right">
+            <p class="text-3xl font-bold text-brand-500">{{ trip.price_per_seat|floatformat:0 }}</p>
+            <p class="text-sm text-muted">{{ trip.currency }} / place</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-8">
+        <div class="elevated rounded-xl p-4">
+            <p class="text-xs text-muted mb-1">Places disponibles</p>
+            <p class="text-xl font-bold">{{ trip.seats_available }} / {{ trip.seats_total }}</p>
+        </div>
+        <div class="elevated rounded-xl p-4">
+            <p class="text-xs text-muted mb-1">Véhicule</p>
+            <p class="text-xl font-bold">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</p>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3 mb-8 p-4 elevated rounded-xl">
+        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center font-bold text-lg">
+            {{ trip.driver.username|first|upper }}
+        </div>
+        <div>
+            <p class="font-semibold">{{ trip.driver.get_full_name|default:trip.driver.username }}</p>
+            <p class="text-sm text-muted">★ {{ trip.driver.rating_avg|default:"Nouveau" }} · Conducteur</p>
+        </div>
+    </div>
+
+    {% if user.is_authenticated and user != trip.driver and trip.status == "PUBLISHED" and trip.seats_available > 0 %}
+    <button onclick="openBookModal()"
+            class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
+        Réserver
+    </button>
+
+    <script>
+    function openBookModal() {
+        const maxSeats = {{ trip.seats_available }};
+        let options = '';
+        for (let i = 1; i <= maxSeats; i++) {
+            options += `<option value="${i}">${i} place${i > 1 ? 's' : ''}</option>`;
+        }
+        openModal(`
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">Réserver ce trajet</h2>
+                <button onclick="closeModal()" class="p-1.5 rounded-full hover:bg-white/10 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="text-muted text-sm mb-6">{{ trip.origin_city }} → {{ trip.destination_city }} · {{ trip.price_per_seat|floatformat:0 }} XAF / place</p>
+            <div class="mb-5">
+                <label class="block text-sm text-muted mb-1.5">Nombre de places</label>
+                <select id="book-seats" class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm">
+                    ${options}
+                </select>
+            </div>
+            <button onclick="submitBooking()" class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
+                Confirmer la réservation
+            </button>
+        `);
+    }
+
+    async function submitBooking() {
+        const seats = document.getElementById('book-seats').value;
+        const token = localStorage.getItem('access_token'); // à brancher plus tard avec le login
+        if (!token) {
+            alert('Connectez-vous d’abord (token manquant).');
+            return;
+        }
+        try {
+            const res = await fetch('/api/bookings/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ trip: {{ trip.id }}, seats: parseInt(seats) })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                closeModal();
+                openModal(`
+                    <div class="text-center py-4">
+                        <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Réservation confirmée !</h2>
+                        <p class="text-muted text-sm mb-6">${seats} place(s) · ${data.total_price} XAF</p>
+                        <button onclick="closeModal(); location.href='/my-bookings/'" class="px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
+                            Voir mes réservations
+                        </button>
+                    </div>
+                `);
+            } else {
+                alert(data.detail || JSON.stringify(data));
+            }
+        } catch (e) {
+            alert('Erreur réseau');
+        }
+    }
+    </script>
+    {% elif not user.is_authenticated %}
+    <a href="/dashboard/login/" class="block w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold text-center hover:bg-brand-400 transition">
+        Connectez-vous pour réserver
+    </a>
+    {% endif %}
+</div>
+</section>
+{% endblock %}
