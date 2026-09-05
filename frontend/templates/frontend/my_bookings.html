@@ -43,12 +43,17 @@
         </div>
     </div>
 
-    {% empty %}
-    <div class="text-center py-20 text-muted">
-        <p class="text-lg">Aucune réservation.</p>
-        <a href="{% url 'frontend:search' %}"
-           class="inline-block mt-4 text-brand-500 font-medium hover:underline">
-            Rechercher un trajet →
+   {% empty %}
+    <div class="text-center py-24 animate-in">
+        <div class="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-5">
+            <svg class="w-10 h-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+        </div>
+        <p class="text-lg font-medium mb-1">Aucune réservation</p>
+        <p class="text-sm text-muted mb-6">Vous n’avez pas encore réservé de trajet.</p>
+        <a href="{% url 'frontend:search' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">
+            Rechercher un trajet
         </a>
     </div>
     {% endfor %}

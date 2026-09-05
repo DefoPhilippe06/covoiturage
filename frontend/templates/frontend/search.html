@@ -48,8 +48,14 @@
             </div>
         </a>
         {% empty %}
-        <div class="text-center py-20 text-muted">
-            <p class="text-lg">Aucun trajet ne correspond à votre recherche.</p>
+        <div class="col-span-full text-center py-20 animate-in">
+            <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <p class="text-lg font-medium">Aucun trajet trouvé</p>
+            <p class="text-sm text-muted mt-1">Essayez d’autres villes ou une autre date.</p>
         </div>
         {% endfor %}
     </div>

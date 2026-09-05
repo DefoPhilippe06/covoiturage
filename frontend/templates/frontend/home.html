@@ -3,7 +3,9 @@
 {% block title %}Covoiturage — Voyagez ensemble{% endblock %}
 
 {% block content %}
+
 <!-- Hero -->
+
 <section class="relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-b from-brand-500/10 via-transparent to-transparent pointer-events-none"></div>
     <div class="w-full px-6 sm:px-10 lg:px-16 pt-16 pb-20 sm:pt-24 sm:pb-28">
@@ -16,83 +18,114 @@
                 Trouvez ou proposez des trajets en quelques clics. Simple, sûr et économique.
             </p>
         </div>
-
-        <!-- Search box -->
-        <form action="{% url 'frontend:search' %}" method="get"
-              class="mt-10 card rounded-2xl p-4 sm:p-5 shadow-2xl shadow-black/20 max-w-4xl">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                    <label class="block text-xs text-muted mb-1.5 font-medium">Départ</label>
-                    <input type="text" name="origin" placeholder="Ville de départ"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-muted mb-1.5 font-medium">Destination</label>
-                    <input type="text" name="destination" placeholder="Ville d'arrivée"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs text-muted mb-1.5 font-medium">Date</label>
-                    <input type="date" name="date"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition text-sm">
-                </div>
-                <div class="flex items-end">
-                    <button type="submit"
-                            class="w-full py-3 rounded-xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition">
-                        Rechercher
-                    </button>
-                </div>
+    <!-- Search box -->
+    <form action="{% url 'frontend:search' %}" method="get"
+          class="mt-10 card rounded-2xl p-4 sm:p-5 shadow-2xl shadow-black/20 max-w-4xl">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-xs text-muted mb-1.5 font-medium">Départ</label>
+                <input type="text" name="origin" placeholder="Ville de départ"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition text-sm">
             </div>
-        </form>
-    </div>
+
+            <div>
+                <label class="block text-xs text-muted mb-1.5 font-medium">Destination</label>
+                <input type="text" name="destination" placeholder="Ville d'arrivée"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs text-muted mb-1.5 font-medium">Date</label>
+                <input type="date" name="date"
+                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition text-sm">
+            </div>
+
+            <div class="flex items-end">
+                <button type="submit"
+                        class="w-full py-3 rounded-xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition">
+                    Rechercher
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
 </section>
 
 <!-- Trajets récents -->
+
 <section class="w-full px-6 sm:px-10 lg:px-16 pb-20">
     <div class="flex items-center justify-between mb-8">
         <h2 class="text-2xl font-bold">Trajets disponibles</h2>
-        <a href="{% url 'frontend:search' %}" class="text-sm text-brand-500 hover:underline font-medium">Voir tout →</a>
+        <a href="{% url 'frontend:search' %}"
+           class="text-sm text-brand-500 hover:underline font-medium">
+            Voir tout →
+        </a>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {% for trip in trips %}
-        <a href="{% url 'frontend:trip_detail' trip.pk %}"
-           class="card rounded-2xl p-5 hover:border-brand-500/30 transition group">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <p class="font-semibold text-lg group-hover:text-brand-500 transition">
-                        {{ trip.origin_city }} → {{ trip.destination_city }}
-                    </p>
-                    <p class="text-sm text-muted mt-1">
-                        {{ trip.departure_datetime|date:"D d M Y · H:i" }}
-                    </p>
-                </div>
-                <div class="text-right">
-                    <p class="text-xl font-bold text-brand-500">{{ trip.price_per_seat|floatformat:0 }}</p>
-                    <p class="text-xs text-muted">{{ trip.currency }} / place</p>
-                </div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for trip in trips %}
+    <a href="{% url 'frontend:trip_detail' trip.pk %}"
+       class="card rounded-2xl p-5 hover:border-brand-500/30 transition group animate-in"
+       style="animation-delay: {{ forloop.counter0 }}00ms">
+
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <p class="font-semibold text-lg group-hover:text-brand-500 transition">
+                    {{ trip.origin_city }} → {{ trip.destination_city }}
+                </p>
+
+                <p class="text-sm text-muted mt-1">
+                    {{ trip.departure_datetime|date:"D d M Y · H:i" }}
+                </p>
             </div>
-            <div class="mt-4 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center text-xs font-bold">
-                        {{ trip.driver.username|first|upper }}
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium">{{ trip.driver.username }}</p>
-                        <p class="text-xs text-muted">★ {{ trip.driver.rating_avg|default:"—" }}</p>
-                    </div>
-                </div>
-                <span class="text-xs px-2.5 py-1 rounded-full bg-brand-500/15 text-brand-500 font-medium">
-                    {{ trip.seats_available }} place{{ trip.seats_available|pluralize }}
-                </span>
+
+            <div class="text-right">
+                <p class="text-xl font-bold text-brand-500">
+                    {{ trip.price_per_seat|floatformat:0 }}
+                </p>
+                <p class="text-xs text-muted">
+                    {{ trip.currency }} / place
+                </p>
             </div>
-        </a>
-        {% empty %}
-        <div class="col-span-full text-center py-16 text-muted">
-            <p class="text-lg">Aucun trajet disponible pour le moment.</p>
-            <a href="{% url 'frontend:publish' %}" class="inline-block mt-4 text-brand-500 font-medium hover:underline">Publier un trajet →</a>
         </div>
-        {% endfor %}
+
+        <div class="mt-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center text-xs font-bold">
+                    {{ trip.driver.username|first|upper }}
+                </div>
+
+                <div>
+                    <p class="text-sm font-medium">
+                        {{ trip.driver.username }}
+                    </p>
+                    <p class="text-xs text-muted">
+                        ★ {{ trip.driver.rating_avg|default:"—" }}
+                    </p>
+                </div>
+            </div>
+
+            <span class="text-xs px-2.5 py-1 rounded-full bg-brand-500/15 text-brand-500 font-medium">
+                {{ trip.seats_available }} place{{ trip.seats_available|pluralize }}
+            </span>
+        </div>
+    </a>
+
+    {% empty %}
+    <div class="col-span-full text-center py-20 animate-in">
+        <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+        </div>
+
+        <p class="text-lg font-medium">Aucun trajet trouvé</p>
+        <p class="text-sm text-muted mt-1">
+            Essayez d’autres villes ou une autre date.
+        </p>
     </div>
+    {% endfor %}
+</div>
 </section>
 {% endblock %}
