@@ -2,503 +2,145 @@
 {% block title %}Publier un trajet — Covoiturage{% endblock %}
 
 {% block content %}
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10 sm:py-14">
+    <div class="max-w-xl mx-auto text-center">
+        <p class="text-[11px] uppercase tracking-wider text-brand-500 font-semibold mb-3">Conducteur</p>
+        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">Publier un trajet</h1>
+        <p class="text-muted mt-3 text-sm sm:text-base max-w-md mx-auto">
+            Proposez vos places disponibles et voyagez rentable.
+        </p>
 
-<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
-    <h1 class="text-3xl font-bold mb-2">Publier un trajet</h1>
-    <p class="text-muted mb-8">Proposez vos places disponibles.</p>
+        <div class="card rounded-3xl p-6 sm:p-8 mt-10 border border-white/5 text-left space-y-4">
+            <div class="flex items-center gap-3 text-sm text-muted">
+                <span class="w-8 h-8 rounded-full bg-brand-500/15 text-brand-500 flex items-center justify-center font-bold text-xs">1</span>
+                Choisissez votre véhicule
+            </div>
+            <div class="flex items-center gap-3 text-sm text-muted">
+                <span class="w-8 h-8 rounded-full bg-brand-500/15 text-brand-500 flex items-center justify-center font-bold text-xs">2</span>
+                Indiquez trajet, date et prix
+            </div>
+            <div class="flex items-center gap-3 text-sm text-muted">
+                <span class="w-8 h-8 rounded-full bg-brand-500/15 text-brand-500 flex items-center justify-center font-bold text-xs">3</span>
+                Publiez en un clic
+            </div>
 
-<div class="card rounded-2xl p-6 sm:p-8 space-y-5">
-    <button onclick="openPublishModal()"
-            class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
-        Publier un trajet
-    </button>
-</div>
+            <button onclick="openPublishModal()"
+                    class="w-full mt-4 py-4 rounded-2xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 active:scale-[0.98] transition">
+                Commencer
+            </button>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-
 async function openPublishModal() {
     const token = localStorage.getItem('access_token');
-
-    if (!token) {
-        window.location.href = '/login/';
-        return;
-    }
+    if (!token) { window.location.href = '/login/'; return; }
 
     let vehicleOptions = '';
-
     try {
-        const res = await fetch('/api/vehicles/', {
-            headers: {
-                'Authorization': 'Bearer ' + token
-            }
-        });
-
+        const res = await fetch('/api/vehicles/', { headers: { 'Authorization': 'Bearer ' + token } });
         const data = await res.json();
         const vehicles = data.results || data;
-
         if (vehicles.length > 0) {
-            vehicleOptions = vehicles.map(vehicle => `
-                <option value="${vehicle.id}">
-                    ${vehicle.brand} ${vehicle.model} — ${vehicle.plate_number}
-                </option>
-            `).join('');
+            vehicleOptions = vehicles.map(v =>
+                `<option value="${v.id}">${v.brand} ${v.model} — ${v.plate_number}</option>`
+            ).join('');
         }
-    } catch (error) {
-        console.error('Erreur lors du chargement des véhicules :', error);
-    }
+    } catch (e) { console.error(e); }
 
     openModal(`
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold">Nouveau trajet</h2>
-
-            <button onclick="closeModal()"
-                    class="p-1.5 rounded-full hover:bg-white/10">
-                <svg class="w-5 h-5"
-                     fill="none"
-                     stroke="currentColor"
-                     viewBox="0 0 24 24">
-                    <path stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"/>
-                </svg>
+            <button onclick="closeModal()" class="p-1.5 rounded-full hover:bg-white/10">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-
+        <div id="pub-error" class="hidden mb-4 p-3 rounded-xl bg-red-500/15 text-red-400 text-sm"></div>
         <div class="space-y-4">
-
             <div>
-                <label class="block text-sm text-muted mb-1.5">
-                    Départ
-                </label>
-
-                <input id="pub-origin"
-                       type="text"
-                       placeholder="Yaoundé"
-                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                <label class="block text-sm text-muted mb-1.5">Départ *</label>
+                <input id="pub-origin" type="text" placeholder="Yaoundé" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
             </div>
-
             <div>
-                <label class="block text-sm text-muted mb-1.5">
-                    Destination
-                </label>
-
-                <input id="pub-dest"
-                       type="text"
-                       placeholder="Douala"
-                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                <label class="block text-sm text-muted mb-1.5">Destination *</label>
+                <input id="pub-dest" type="text" placeholder="Douala" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
             </div>
-
             <div class="grid grid-cols-2 gap-3">
-
                 <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Date & heure
-                    </label>
-
-                    <input id="pub-datetime"
-                           type="datetime-local"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                    <label class="block text-sm text-muted mb-1.5">Date & heure *</label>
+                    <input id="pub-datetime" type="datetime-local" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
                 </div>
-
                 <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Places
-                    </label>
-
-                    <input id="pub-seats"
-                           type="number"
-                           min="1"
-                           max="8"
-                           value="3"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                    <label class="block text-sm text-muted mb-1.5">Places *</label>
+                    <input id="pub-seats" type="number" min="1" max="8" value="3" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
                 </div>
-
             </div>
-
             <div>
-                <label class="block text-sm text-muted mb-1.5">
-                    Prix / place (XAF)
-                </label>
-
-                <input id="pub-price"
-                       type="number"
-                       min="0"
-                       placeholder="5000"
-                       class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                <label class="block text-sm text-muted mb-1.5">Prix / place (XAF) *</label>
+                <input id="pub-price" type="number" min="0" placeholder="5000" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
             </div>
-
             <div>
-                <label class="block text-sm text-muted mb-1.5">
-                    Véhicule
-                </label>
-
-                ${
-                    vehicleOptions
-                    ? `
-                        <select id="pub-vehicle"
-                                class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
-                            ${vehicleOptions}
-                        </select>
-                    `
-                    : `
-                        <div class="p-3 rounded-xl bg-yellow-500/10 text-yellow-400 text-sm">
-                            Aucun véhicule enregistré.
-                        </div>
-                    `
-                }
-
-                <button type="button"
-                        onclick="closeModal(); openAddVehicleModal();"
-                        class="text-sm text-brand-500 hover:underline mt-2">
-                    + Ajouter un véhicule
-                </button>
+                <label class="block text-sm text-muted mb-1.5">Véhicule *</label>
+                ${vehicleOptions ? `
+                    <select id="pub-vehicle" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">${vehicleOptions}</select>
+                ` : `
+                    <div class="p-3 rounded-xl bg-yellow-500/10 text-yellow-400 text-sm">Aucun véhicule enregistré.</div>
+                `}
+                <button type="button" onclick="closeModal(); openAddVehicleModal();" class="text-sm text-brand-500 hover:underline mt-2">+ Ajouter un véhicule</button>
             </div>
-
-            <button onclick="submitPublish()"
-                    class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition mt-2">
-                Publier
-            </button>
-
+            <button onclick="submitPublish()" class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition mt-2">Publier</button>
         </div>
     `);
 }
-
-
-function openAddVehicleModal() {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-        window.location.href = '/login/';
-        return;
-    }
-
-    openModal(`
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold">
-                Ajouter un véhicule
-            </h2>
-
-            <button onclick="closeModal()"
-                    class="p-1.5 rounded-full hover:bg-white/10">
-                <svg class="w-5 h-5"
-                     fill="none"
-                     stroke="currentColor"
-                     viewBox="0 0 24 24">
-                    <path stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
-
-        <div id="veh-error"
-             class="hidden mb-4 p-3 rounded-lg bg-red-500/20 text-red-400 text-sm">
-        </div>
-
-        <div class="space-y-4">
-
-            <div class="grid grid-cols-2 gap-3">
-
-                <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Marque *
-                    </label>
-
-                    <input id="veh-brand"
-                           type="text"
-                           placeholder="Toyota"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
-                </div>
-
-                <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Modèle *
-                    </label>
-
-                    <input id="veh-model"
-                           type="text"
-                           placeholder="Corolla"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
-                </div>
-
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-
-                <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Couleur
-                    </label>
-
-                    <input id="veh-color"
-                           type="text"
-                           placeholder="Gris"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
-                </div>
-
-                <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Année
-                    </label>
-
-                    <input id="veh-year"
-                           type="number"
-                           placeholder="2020"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
-                </div>
-
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-
-                <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Plaque *
-                    </label>
-
-                    <input id="veh-plate"
-                           type="text"
-                           placeholder="CM-1234-AB"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
-                </div>
-
-                <div>
-                    <label class="block text-sm text-muted mb-1.5">
-                        Places *
-                    </label>
-
-                    <input id="veh-seats"
-                           type="number"
-                           min="1"
-                           max="9"
-                           value="4"
-                           class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
-                </div>
-
-            </div>
-
-            <button onclick="submitVehicle()"
-                    class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
-                Enregistrer
-            </button>
-
-        </div>
-    `);
-}
-
-
-async function submitVehicle() {
-    const errorEl = document.getElementById('veh-error');
-
-    errorEl.classList.add('hidden');
-
-    const brand = document.getElementById('veh-brand').value.trim();
-    const model = document.getElementById('veh-model').value.trim();
-    const plate = document.getElementById('veh-plate').value.trim();
-    const seats = document.getElementById('veh-seats').value;
-
-    if (!brand || !model || !plate || !seats) {
-        errorEl.textContent =
-            'Marque, modèle, plaque et places sont obligatoires.';
-
-        errorEl.classList.remove('hidden');
-        return;
-    }
-
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-        window.location.href = '/login/';
-        return;
-    }
-
-    const body = {
-        brand: brand,
-        model: model,
-        color: document.getElementById('veh-color').value.trim(),
-        plate_number: plate,
-        seats: parseInt(seats),
-        year: parseInt(document.getElementById('veh-year').value) || null
-    };
-
-    try {
-        const res = await fetch('/api/vehicles/', {
-            method: 'POST',
-
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-
-            body: JSON.stringify(body)
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-
-            closeModal();
-
-            openModal(`
-                <div class="text-center py-4">
-
-                    <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-brand-500"
-                             fill="none"
-                             stroke="currentColor"
-                             viewBox="0 0 24 24">
-                            <path stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M5 13l4 4L19 7"/>
-                        </svg>
-                    </div>
-
-                    <h2 class="text-xl font-bold mb-2">
-                        Véhicule ajouté !
-                    </h2>
-
-                    <p class="text-muted text-sm mb-4">
-                        ${data.brand} ${data.model}
-                    </p>
-
-                    <button onclick="closeModal(); openPublishModal();"
-                            class="px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
-                        Publier un trajet
-                    </button>
-
-                </div>
-            `);
-
-        } else {
-
-            errorEl.textContent =
-                data.plate_number
-                    ? 'Cette plaque existe déjà.'
-                    : JSON.stringify(data);
-
-            errorEl.classList.remove('hidden');
-        }
-
-    } catch (error) {
-
-        errorEl.textContent =
-            'Erreur de connexion au serveur.';
-
-        errorEl.classList.remove('hidden');
-    }
-}
-
 
 async function submitPublish() {
-
+    const errorEl = document.getElementById('pub-error');
+    if (errorEl) errorEl.classList.add('hidden');
+    const origin = document.getElementById('pub-origin')?.value.trim();
+    const dest = document.getElementById('pub-dest')?.value.trim();
+    const datetime = document.getElementById('pub-datetime')?.value;
+    const seats = document.getElementById('pub-seats')?.value;
+    const price = document.getElementById('pub-price')?.value;
+    const vehicle = document.getElementById('pub-vehicle')?.value;
+    if (!origin || !dest || !datetime || !seats || !price || !vehicle) {
+        if (errorEl) { errorEl.textContent = 'Remplissez tous les champs obligatoires.'; errorEl.classList.remove('hidden'); }
+        return;
+    }
     const token = localStorage.getItem('access_token');
-
-    if (!token) {
-        window.location.href = '/login/';
-        return;
-    }
-
-    const vehicleElement =
-        document.getElementById('pub-vehicle');
-
-    if (!vehicleElement) {
-        alert('Vous devez d’abord ajouter un véhicule.');
-        return;
-    }
-
-    const origin =
-        document.getElementById('pub-origin').value.trim();
-
-    const destination =
-        document.getElementById('pub-dest').value.trim();
-
-    const datetime =
-        document.getElementById('pub-datetime').value;
-
-    const seats =
-        document.getElementById('pub-seats').value;
-
-    const price =
-        document.getElementById('pub-price').value;
-
-    const vehicle =
-        vehicleElement.value;
-
-    if (!origin || !destination || !datetime || !seats || !price || !vehicle) {
-        alert('Veuillez remplir tous les champs.');
-        return;
-    }
-
     const body = {
         vehicle: parseInt(vehicle),
         origin_city: origin,
-        destination_city: destination,
+        destination_city: dest,
         departure_datetime: datetime,
         seats_total: parseInt(seats),
         price_per_seat: price
     };
-
-    try {
-
-        const res = await fetch('/api/trips/', {
-            method: 'POST',
-
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-
-            body: JSON.stringify(body)
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-
-            closeModal();
-
-            openModal(`
-                <div class="text-center py-4">
-
-                    <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-brand-500"
-                             fill="none"
-                             stroke="currentColor"
-                             viewBox="0 0 24 24">
-                            <path stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M5 13l4 4L19 7"/>
-                        </svg>
-                    </div>
-
-                    <h2 class="text-xl font-bold mb-2">
-                        Trajet publié !
-                    </h2>
-
-                    <button onclick="closeModal(); location.href='/my-trips/'"
-                            class="mt-4 px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
-                        Voir mes trajets
-                    </button>
-
+    const res = await fetch('/api/trips/', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (res.ok) {
+        closeModal();
+        openModal(`
+            <div class="text-center py-4">
+                <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 </div>
-            `);
-
-        } else {
-
-            alert(JSON.stringify(data));
-        }
-
-    } catch (error) {
-
-        alert('Erreur de connexion au serveur.');
+                <h2 class="text-xl font-bold mb-2">Trajet publié !</h2>
+                <button onclick="closeModal(); location.href='/my-trips/'" class="mt-4 px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">Voir mes trajets</button>
+            </div>
+        `);
+    } else {
+        let msg = 'Erreur publication';
+        if (data.vehicle) msg = 'Véhicule invalide.';
+        else if (typeof data === 'object') msg = Object.values(data).flat().join(' ');
+        if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); }
     }
 }
-
 </script>
-
-</section>
-
 {% endblock %}
