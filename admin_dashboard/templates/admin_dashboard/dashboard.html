@@ -1,4 +1,5 @@
 {% extends "admin_dashboard/base.html" %}
+{% load stars_tags %}
 
 {% block title %}Dashboard — Covoiturage{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -347,14 +348,14 @@
 
             <div class="flex items-center gap-1 flex-shrink-0">
 
-                <span class="text-yellow-400 font-bold">
-
-                    {{ review.rating }}
-
-                </span>
-
-                <span class="text-yellow-400">
-                    ★
+               <span class="inline-flex gap-0.5 text-sm">
+                {% for filled in review.rating|star_list %}
+                {% if filled %}
+                <span class="text-yellow-400">★</span>
+                {% else %}
+                <span class="text-white/20">★</span>
+                {% endif %}
+                {% endfor %}
                 </span>
 
             </div>
