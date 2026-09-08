@@ -13,4 +13,6 @@ urlpatterns = [
     path("login/", views.login_page, name="login"),
     path("register/", views.register_page, name="register"),
     path("api/session-login/", views.session_login, name="session_login"),
+    path("my-vehicles/", views.my_vehicles, name="my_vehicles"),
+    path("messages/", views.messages_page, name="messages"),
 ]

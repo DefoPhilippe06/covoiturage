@@ -28,6 +28,30 @@
         }
     </script>
     <style>
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-in {
+            animation: fadeInUp 0.4s ease-out both;
+        }
+        .animate-fade {
+            animation: fadeIn 0.3s ease-out both;
+        }
+        .card {
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        #modal-content {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
         [data-theme="dark"] {
             --bg: #0a0a0a;
             --bg-card: #141414;
@@ -70,6 +94,8 @@
         {% if user.is_authenticated %}
         <a href="{% url 'frontend:my_bookings' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Mes réservations</a>
         <a href="{% url 'frontend:my_trips' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Mes trajets</a>
+        <a href="{% url 'frontend:my_vehicles' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Mes véhicules</a>
+        <a href="{% url 'frontend:messages' %}" class="px-4 py-2 rounded-full text-sm font-medium hover:bg-white/5 transition">Messages</a>
         <a href="{% url 'frontend:publish' %}" class="ml-2 px-5 py-2 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">Publier</a>
         {% endif %}
     </nav>
@@ -689,7 +715,7 @@ async function openNotifications() {
 
     const token = localStorage.getItem('access_token');
 
-    if (!token) return;
+    if (!token) { window.location.href = '/login/'; return; }
 
     let listHtml =
         '<p class="text-muted text-sm text-center py-6">Chargement...</p>';
@@ -830,6 +856,113 @@ function logout() {
     localStorage.removeItem('refresh_token');
 
     window.location.href = '/login/';
+}
+</script>
+
+<!-- GESTION DES VÉHICULES -->
+<script>
+function openAddVehicleModal() {
+    const token = localStorage.getItem('access_token');
+    if (!token) { window.location.href = '/login/'; return; }
+
+    openModal(`
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold">Ajouter un véhicule</h2>
+            <button onclick="closeModal()" class="p-1.5 rounded-full hover:bg-white/10">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div id="veh-error" class="hidden mb-4 p-3 rounded-lg bg-red-500/20 text-red-400 text-sm"></div>
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Marque *</label>
+                    <input id="veh-brand" type="text" placeholder="Toyota" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Modèle *</label>
+                    <input id="veh-model" type="text" placeholder="Corolla" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Couleur</label>
+                    <input id="veh-color" type="text" placeholder="Gris" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Année</label>
+                    <input id="veh-year" type="number" placeholder="2020" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Plaque *</label>
+                    <input id="veh-plate" type="text" placeholder="CM-1234-AB" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-muted mb-1.5">Places *</label>
+                    <input id="veh-seats" type="number" min="1" max="9" value="4" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none">
+                </div>
+            </div>
+            <button onclick="submitVehicle()" class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
+                Enregistrer
+            </button>
+        </div>
+    `);
+}
+
+async function submitVehicle() {
+    const errorEl = document.getElementById('veh-error');
+    if (errorEl) errorEl.classList.add('hidden');
+
+    const brand = document.getElementById('veh-brand').value.trim();
+    const model = document.getElementById('veh-model').value.trim();
+    const plate = document.getElementById('veh-plate').value.trim();
+    const seats = document.getElementById('veh-seats').value;
+
+    if (!brand || !model || !plate || !seats) {
+        if (errorEl) {
+            errorEl.textContent = 'Marque, modèle, plaque et places sont obligatoires.';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    const token = localStorage.getItem('access_token');
+    const body = {
+        brand, model,
+        color: document.getElementById('veh-color').value.trim(),
+        plate_number: plate,
+        seats: parseInt(seats),
+        year: parseInt(document.getElementById('veh-year').value) || null
+    };
+
+    const res = await fetch('/api/vehicles/', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+        closeModal();
+        if (typeof loadVehicles === 'function') loadVehicles();
+        openModal(`
+            <div class="text-center py-4">
+                <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h2 class="text-xl font-bold mb-2">Véhicule ajouté !</h2>
+                <p class="text-muted text-sm mb-4">${data.brand} ${data.model}</p>
+                <button onclick="closeModal()" class="px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">OK</button>
+            </div>
+        `);
+    } else {
+        if (errorEl) {
+            errorEl.textContent = data.plate_number ? 'Cette plaque existe déjà.' : JSON.stringify(data);
+            errorEl.classList.remove('hidden');
+        }
+    }
 }
 </script>
 

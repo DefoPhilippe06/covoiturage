@@ -6,84 +6,131 @@
 <section class="w-full px-6 sm:px-10 lg:px-16 py-10">
     <h1 class="text-3xl font-bold mb-8">Mes réservations</h1>
 <div class="space-y-4">
+
     {% for booking in bookings %}
+
     <div class="card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
         <div>
             <p class="font-semibold text-lg">
                 {{ booking.trip.origin_city }} → {{ booking.trip.destination_city }}
             </p>
+
             <p class="text-sm text-muted mt-1">
                 {{ booking.trip.departure_datetime|date:"d M Y · H:i" }}
                 · {{ booking.seats }} place{{ booking.seats|pluralize }}
             </p>
         </div>
 
-        <div class="flex items-center gap-4">
-            <p class="font-bold">
-                {{ booking.total_price|floatformat:0 }} XAF
-            </p>
+        <div class="flex items-center gap-2 flex-wrap">
 
-            <span class="text-xs px-2.5 py-1 rounded-full
-                {% if booking.status == 'CONFIRMED' %}
-                    bg-green-500/20 text-green-400
-                {% elif booking.status == 'CANCELLED' %}
-                    bg-red-500/20 text-red-400
-                {% else %}
-                    bg-yellow-500/20 text-yellow-400
-                {% endif %}">
-                {{ booking.get_status_display }}
-            </span>
+            {% if booking.status == 'CONFIRMED' and booking.trip.status != 'COMPLETED' and booking.trip.status != 'CANCELLED' %}
 
-            {% if booking.status == 'CONFIRMED' %}
+            <button onclick="completeTrip({{ booking.trip.id }})"
+                    class="text-xs px-3 py-1.5 rounded-full bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition">
+                Trajet effectué
+            </button>
+
             <button onclick="cancelBooking({{ booking.id }})"
                     class="text-xs px-3 py-1.5 rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25 transition">
                 Annuler
             </button>
+
             {% endif %}
+
+
+            {% if booking.trip.status == 'COMPLETED' %}
+
+            <button onclick="openReviewModal({{ booking.trip.id }}, {{ booking.trip.driver_id }}, '{{ booking.trip.driver.username }}')"
+                    class="text-xs px-3 py-1.5 rounded-full bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 transition">
+                Noter le conducteur
+            </button>
+
+            {% endif %}
+
         </div>
+
     </div>
 
     {% empty %}
-    <div class="text-center py-20 text-muted">
-        <p class="text-lg">Aucune réservation.</p>
+
+    <div class="text-center py-24 animate-in">
+
+        <div class="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-5">
+
+            <svg class="w-10 h-10 text-muted"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+
+            </svg>
+
+        </div>
+
+        <p class="text-lg font-medium mb-1">
+            Aucune réservation
+        </p>
+
+        <p class="text-sm text-muted mb-6">
+            Vous n’avez pas encore réservé de trajet.
+        </p>
+
         <a href="{% url 'frontend:search' %}"
-           class="inline-block mt-4 text-brand-500 font-medium hover:underline">
-            Rechercher un trajet →
+           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">
+            Rechercher un trajet
         </a>
+
     </div>
+
     {% endfor %}
+
 </div>
 </section>
+
 {% endblock %}
 
 {% block extra_js %}
 
 <script>
-function cancelBooking(id) {
+
+async function completeTrip(tripId) {
     openModal(`
         <div class="text-center py-2">
-            <h2 class="text-xl font-bold mb-2">Annuler la réservation ?</h2>
+
+            <h2 class="text-xl font-bold mb-2">
+                Confirmer la fin du trajet ?
+            </h2>
 
             <p class="text-muted text-sm mb-6">
-                Cette action est irréversible.
+                Vous pourrez ensuite noter le conducteur.
             </p>
 
             <div class="flex gap-3 justify-center">
+
                 <button onclick="closeModal()"
-                        class="px-5 py-2.5 rounded-full border border-soft text-sm font-medium hover:bg-white/5">
+                        class="px-5 py-2.5 rounded-full border border-soft text-sm font-medium">
                     Non
                 </button>
 
-                <button onclick="confirmCancel(${id})"
-                        class="px-5 py-2.5 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-400">
-                    Oui, annuler
+                <button onclick="confirmComplete(${tripId})"
+                        class="px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold">
+                    Oui, terminé
                 </button>
+
             </div>
+
         </div>
     `);
 }
 
-async function confirmCancel(id) {
+
+async function confirmComplete(tripId) {
+
     const token = localStorage.getItem('access_token');
 
     if (!token) {
@@ -93,24 +140,410 @@ async function confirmCancel(id) {
     }
 
     try {
-        const res = await fetch(`/api/bookings/${id}/cancel/`, {
+
+        const res = await fetch(`/api/trips/${tripId}/complete/`, {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + token
             }
         });
 
+        const data = await res.json();
+
         if (res.ok) {
+
             closeModal();
             location.reload();
+
         } else {
-            const err = await res.json();
-            alert(err.detail || 'Erreur lors de l’annulation.');
+
+            alert(data.detail || 'Erreur lors de la finalisation du trajet.');
+
         }
+
     } catch (error) {
+
         alert('Erreur de connexion au serveur.');
+
     }
 }
+
+function cancelBooking(id) {
+
+    openModal(`
+        <div class="text-center py-2">
+
+            <h2 class="text-xl font-bold mb-2">
+                Annuler la réservation ?
+            </h2>
+
+            <p class="text-muted text-sm mb-6">
+                Cette action est irréversible.
+            </p>
+
+            <div class="flex gap-3 justify-center">
+
+                <button onclick="closeModal()"
+                        class="px-5 py-2.5 rounded-full border border-soft text-sm font-medium hover:bg-white/5">
+                    Non
+                </button>
+
+                <button onclick="confirmCancel(${id})"
+                        class="px-5 py-2.5 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-400">
+                    Oui, annuler
+                </button>
+
+            </div>
+
+        </div>
+    `);
+}
+
+
+async function confirmCancel(id) {
+
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+
+        alert('Session expirée. Veuillez vous reconnecter.');
+
+        window.location.href = '/login/';
+
+        return;
+    }
+
+    try {
+
+        const res = await fetch(`/api/bookings/${id}/cancel/`, {
+
+            method: 'POST',
+
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+
+        });
+
+        if (res.ok) {
+
+            closeModal();
+
+            location.reload();
+
+        } else {
+
+            const err = await res.json();
+
+            alert(
+                err.detail ||
+                'Erreur lors de l’annulation.'
+            );
+        }
+
+    } catch (error) {
+
+        alert(
+            'Erreur de connexion au serveur.'
+        );
+    }
+}
+
+
+function openReviewModal(tripId, driverId, driverName) {
+
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+
+        window.location.href = '/login/';
+
+        return;
+    }
+
+    openModal(`
+
+        <div class="flex items-center justify-between mb-6">
+
+            <h2 class="text-xl font-bold">
+                Noter ${driverName}
+            </h2>
+
+            <button onclick="closeModal()"
+                    class="p-1.5 rounded-full hover:bg-white/10">
+
+                <svg class="w-5 h-5"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24">
+
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"/>
+
+                </svg>
+
+            </button>
+
+        </div>
+
+
+        <div id="review-error"
+             class="hidden mb-4 p-3 rounded-lg bg-red-500/20 text-red-400 text-sm">
+        </div>
+
+
+        <div class="space-y-5">
+
+            <div>
+
+                <label class="block text-sm text-muted mb-2">
+                    Note
+                </label>
+
+                <div class="flex gap-2"
+                     id="star-rating">
+
+                    ${[1,2,3,4,5].map(n => `
+
+                        <button type="button"
+                                data-rating="${n}"
+                                onclick="setRating(${n})"
+                                class="star-btn text-2xl text-muted hover:text-yellow-400 transition">
+
+                            ★
+
+                        </button>
+
+                    `).join('')}
+
+                </div>
+
+                <input type="hidden"
+                       id="review-rating"
+                       value="0">
+
+            </div>
+
+
+            <div>
+
+                <label class="block text-sm text-muted mb-1.5">
+                    Commentaire (optionnel)
+                </label>
+
+                <textarea id="review-comment"
+                          rows="3"
+                          placeholder="Comment s'est passé le trajet ?"
+                          class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:ring-2 focus:ring-brand-500/50 focus:outline-none resize-none"></textarea>
+
+        </div>
+
+
+        <button onclick="submitReview(${tripId}, ${driverId})"
+                class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
+
+            Envoyer l'avis
+
+        </button>
+
+    </div>
+
+`);
+}
+
+function setRating(n) {
+document.getElementById('review-rating').value = n;
+
+document.querySelectorAll('.star-btn').forEach((btn, i) => {
+
+    btn.classList.toggle(
+        'text-yellow-400',
+        i < n
+    );
+
+    btn.classList.toggle(
+        'text-muted',
+        i >= n
+    );
+
+});
+}
+
+async function submitReview(tripId, driverId) {
+const errorEl =
+    document.getElementById('review-error');
+
+errorEl.classList.add('hidden');
+
+
+const rating =
+    parseInt(
+        document.getElementById('review-rating').value
+    );
+
+
+const comment =
+    document.getElementById('review-comment')
+        .value
+        .trim();
+
+
+if (!rating || rating < 1) {
+
+    errorEl.textContent =
+        'Choisissez une note de 1 à 5.';
+
+    errorEl.classList.remove('hidden');
+
+    return;
+}
+
+
+const token =
+    localStorage.getItem('access_token');
+
+
+if (!token) {
+
+    window.location.href = '/login/';
+
+    return;
+}
+
+
+try {
+
+    const res = await fetch('/api/reviews/', {
+
+        method: 'POST',
+
+        headers: {
+
+            'Authorization':
+                'Bearer ' + token,
+
+            'Content-Type':
+                'application/json'
+
+        },
+
+        body: JSON.stringify({
+
+            trip: tripId,
+
+            reviewed_user: driverId,
+
+            rating: rating,
+
+            comment: comment
+
+        })
+
+    });
+
+
+    const text =
+        await res.text();
+
+
+    let data;
+
+
+    try {
+
+        data =
+            JSON.parse(text);
+
+    } catch {
+
+        data = {};
+
+    }
+
+
+    if (res.ok) {
+
+        closeModal();
+
+
+        openModal(`
+
+            <div class="text-center py-4">
+
+                <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
+
+                    <span class="text-3xl">
+                        ★
+                    </span>
+
+                </div>
+
+
+                <h2 class="text-xl font-bold mb-2">
+                    Merci pour votre avis !
+                </h2>
+
+
+                <p class="text-muted text-sm mb-4">
+                    ${rating}/5
+                </p>
+
+
+                <button onclick="closeModal(); location.reload()"
+                        class="px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
+
+                    OK
+
+                </button>
+
+            </div>
+
+        `);
+
+    } else {
+
+        let msg =
+            'Erreur lors de l\'envoi.';
+
+
+        if (data.non_field_errors) {
+
+            msg =
+                data.non_field_errors.join(' ');
+
+        } else if (typeof data === 'object') {
+
+            msg =
+                Object.values(data)
+                    .flat()
+                    .join(' ') || msg;
+
+        }
+
+
+        errorEl.textContent =
+            msg;
+
+        errorEl.classList.remove('hidden');
+
+    }
+
+} catch (error) {
+
+    errorEl.textContent =
+        'Erreur de connexion au serveur.';
+
+    errorEl.classList.remove('hidden');
+
+    console.error(
+        'Erreur review:',
+        error
+    );
+}
+}
+
 </script>
 
 {% endblock %}

@@ -23,9 +23,19 @@
                 {{ trip.get_status_display }}
             </span>
         </a>
-        {% empty %}
-        <div class="text-center py-20 text-muted">
-            <p class="text-lg">Vous n'avez publié aucun trajet.</p>
+       {% empty %}
+        <div class="text-center py-24 animate-in">
+            <div class="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-5">
+                <svg class="w-10 h-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                </svg>
+            </div>
+            <p class="text-lg font-medium mb-1">Aucun trajet publié</p>
+            <p class="text-sm text-muted mb-6">Proposez vos places et gagnez de l’argent.</p>
+            <a href="{% url 'frontend:publish' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">
+                Publier un trajet
+            </a>
         </div>
         {% endfor %}
     </div>

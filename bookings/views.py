@@ -9,6 +9,7 @@ from messaging.models import Conversation
 from notifications.utils import send_notification
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsOwnerOrReadOnly
+from rest_framework.exceptions import ValidationError, PermissionDenied
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -30,6 +31,10 @@ class BookingViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Places insuffisantes.")
         if trip.status != Trip.Status.PUBLISHED:
             raise PermissionDenied("Trajet non disponible.")
+
+        # Déjà réservé ?
+        if Booking.objects.filter(trip=trip, passenger=user).exists():
+            raise ValidationError("Vous avez déjà une réservation sur ce trajet.")
 
         total = trip.price_per_seat * seats
         booking = serializer.save(

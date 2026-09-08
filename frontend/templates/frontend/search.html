@@ -1,4 +1,5 @@
 {% extends "frontend/base.html" %}
+{% load stars_tags %}
 {% block title %}Rechercher un trajet — Covoiturage{% endblock %}
 
 {% block content %}
@@ -37,7 +38,16 @@
         <a href="{% url 'frontend:trip_detail' trip.pk %}" class="card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-brand-500/30 transition group">
             <div class="flex-1">
                 <p class="font-semibold text-lg group-hover:text-brand-500 transition">{{ trip.origin_city }} → {{ trip.destination_city }}</p>
-                <p class="text-sm text-muted mt-1">{{ trip.departure_datetime|date:"D d M Y · H:i" }} · {{ trip.driver.username }} · ★ {{ trip.driver.rating_avg|default:"—" }}</p>
+                <p class="text-sm text-muted mt-1">{{ trip.departure_datetime|date:"D d M Y · H:i" }} · {{ trip.driver.username }} · <span class="inline-flex gap-0.5 text-sm">
+                        {% for filled in trip.driver.rating_avg|star_list %}
+                        {% if filled %}
+                        <span class="text-yellow-400">★</span>
+                        {% else %}
+                        <span class="text-white/20">★</span>
+                        {% endif %}
+                        {% endfor %}
+                        </span>
+                </p>
             </div>
             <div class="flex items-center gap-6">
                 <div class="text-right">
@@ -48,8 +58,14 @@
             </div>
         </a>
         {% empty %}
-        <div class="text-center py-20 text-muted">
-            <p class="text-lg">Aucun trajet ne correspond à votre recherche.</p>
+        <div class="col-span-full text-center py-20 animate-in">
+            <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <p class="text-lg font-medium">Aucun trajet trouvé</p>
+            <p class="text-sm text-muted mt-1">Essayez d’autres villes ou une autre date.</p>
         </div>
         {% endfor %}
     </div>

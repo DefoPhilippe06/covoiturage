@@ -1,0 +1,48 @@
+{% extends "frontend/base.html" %}
+{% block title %}Mes véhicules — Covoiturage{% endblock %}
+
+{% block content %}
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold">Mes véhicules</h1>
+        <button onclick="openAddVehicleModal()" class="px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">
+            + Ajouter
+        </button>
+    </div>
+    <div id="vehicles-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <p class="text-muted col-span-full text-center py-12">Chargement...</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadVehicles() {
+    const token = localStorage.getItem('access_token');
+    if (!token) { window.location.href = '/login/'; return; }
+    const res = await fetch('/api/vehicles/', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    const vehicles = data.results || data;
+    const el = document.getElementById('vehicles-list');
+
+    if (!vehicles.length) {
+        el.innerHTML = `
+            <div class="col-span-full text-center py-20">
+                <p class="text-lg font-medium mb-2">Aucun véhicule</p>
+                <button onclick="openAddVehicleModal()" class="text-brand-500 font-medium hover:underline">Ajouter mon premier véhicule →</button>
+            </div>`;
+        return;
+    }
+    el.innerHTML = vehicles.map(v => `
+        <div class="card rounded-2xl p-5">
+            <p class="font-semibold text-lg">${v.brand} ${v.model}</p>
+            <p class="text-sm text-muted mt-1">${v.color || '—'} · ${v.year || '—'} · ${v.seats} places</p>
+            <p class="text-sm font-medium mt-3">${v.plate_number}</p>
+        </div>
+    `).join('');
+}
+document.addEventListener('DOMContentLoaded', loadVehicles);
+</script>
+{% endblock %}

@@ -64,3 +64,11 @@ def session_login(request):
         django_login(request, user)
         return JsonResponse({"ok": True})
     return JsonResponse({"ok": False}, status=400)
+
+@login_required
+def my_vehicles(request):
+    return render(request, "frontend/my_vehicles.html")
+
+@login_required
+def messages_page(request):
+    return render(request, "frontend/messages.html")
