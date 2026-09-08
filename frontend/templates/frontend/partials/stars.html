@@ -1,0 +1,14 @@
+{% comment %}
+Usage: {% include "frontend/partials/stars.html" with rating=trip.driver.rating_avg %}
+{% endcomment %}
+<span class="inline-flex items-center gap-0.5" title="{{ rating|default:0 }} / 5">
+{% with r=rating|default:0|floatformat:0 %}
+  {% for i in "12345" %}
+    {% if forloop.counter <= r|add:0 %}
+      <span class="text-yellow-400 text-sm">★</span>
+    {% else %}
+      <span class="text-white/20 text-sm">★</span>
+    {% endif %}
+  {% endfor %}
+{% endwith %}
+</span>

@@ -1,4 +1,5 @@
 {% extends "frontend/base.html" %}
+{% load stars_tags %}
 {% block title %}Rechercher un trajet — Covoiturage{% endblock %}
 
 {% block content %}
@@ -37,7 +38,16 @@
         <a href="{% url 'frontend:trip_detail' trip.pk %}" class="card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-brand-500/30 transition group">
             <div class="flex-1">
                 <p class="font-semibold text-lg group-hover:text-brand-500 transition">{{ trip.origin_city }} → {{ trip.destination_city }}</p>
-                <p class="text-sm text-muted mt-1">{{ trip.departure_datetime|date:"D d M Y · H:i" }} · {{ trip.driver.username }} · ★ {{ trip.driver.rating_avg|default:"—" }}</p>
+                <p class="text-sm text-muted mt-1">{{ trip.departure_datetime|date:"D d M Y · H:i" }} · {{ trip.driver.username }} · <span class="inline-flex gap-0.5 text-sm">
+                        {% for filled in trip.driver.rating_avg|star_list %}
+                        {% if filled %}
+                        <span class="text-yellow-400">★</span>
+                        {% else %}
+                        <span class="text-white/20">★</span>
+                        {% endif %}
+                        {% endfor %}
+                        </span>
+                </p>
             </div>
             <div class="flex items-center gap-6">
                 <div class="text-right">
