@@ -1,20 +1,18 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from .models import Booking
 from .serializers import BookingSerializer
 from trips.models import Trip
-from rest_framework.exceptions import PermissionDenied
 from messaging.models import Conversation
 from notifications.utils import send_notification
-from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsOwnerOrReadOnly
-from rest_framework.exceptions import ValidationError, PermissionDenied
 
 
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
-    permission_classes = [permissions.IsAuthenticated]
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
@@ -32,46 +30,91 @@ class BookingViewSet(viewsets.ModelViewSet):
         if trip.status != Trip.Status.PUBLISHED:
             raise PermissionDenied("Trajet non disponible.")
 
-        # Déjà réservé ?
-        if Booking.objects.filter(trip=trip, passenger=user).exists():
+        # Réservation active déjà ?
+        active = Booking.objects.filter(
+            trip=trip,
+            passenger=user,
+            status__in=[
+                Booking.Status.PENDING,
+                Booking.Status.CONFIRMED,
+                Booking.Status.COMPLETED,
+            ],
+        ).first()
+        if active:
             raise ValidationError("Vous avez déjà une réservation sur ce trajet.")
 
         total = trip.price_per_seat * seats
-        booking = serializer.save(
-            passenger=user,
-            total_price=total,
-            status=Booking.Status.CONFIRMED
-        )
 
-        # Notification au conducteur
+        # Réutiliser une réservation annulée si elle existe
+        cancelled = Booking.objects.filter(
+            trip=trip,
+            passenger=user,
+            status=Booking.Status.CANCELLED,
+        ).first()
+
+        if cancelled:
+            cancelled.seats = seats
+            cancelled.total_price = total
+            cancelled.status = Booking.Status.CONFIRMED
+            cancelled.save(update_fields=["seats", "total_price", "status", "updated_at"])
+            booking = cancelled
+            # Important pour la réponse API
+            serializer.instance = booking
+        else:
+            booking = serializer.save(
+                passenger=user,
+                total_price=total,
+                status=Booking.Status.CONFIRMED,
+            )
+
         send_notification(
             user=trip.driver,
             title="Nouvelle réservation",
-            message=f"{user.username} a réservé {seats} place(s) sur votre trajet {trip.origin_city} → {trip.destination_city}.",
-            type="BOOKING"
+            message=(
+                f"{user.username} a réservé {seats} place(s) sur votre trajet "
+                f"{trip.origin_city} → {trip.destination_city}."
+            ),
+            type="BOOKING",
         )
-
-        # Notification au passager
         send_notification(
             user=user,
             title="Réservation confirmée",
-            message=f"Votre réservation pour {trip.origin_city} → {trip.destination_city} est confirmée.",
-            type="BOOKING"
+            message=(
+                f"Votre réservation pour {trip.origin_city} → "
+                f"{trip.destination_city} est confirmée."
+            ),
+            type="BOOKING",
         )
 
-        # Décrémente les places
         trip.seats_available -= seats
         trip.save(update_fields=["seats_available"])
 
-        # Crée la conversation si elle n'existe pas encore
-        conversation, created = Conversation.objects.get_or_create(trip=trip)
+        conversation, _ = Conversation.objects.get_or_create(trip=trip)
         conversation.participants.add(trip.driver, user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        # Recharger pour renvoyer la bonne instance (y compris réactivée)
+        instance = getattr(serializer, "instance", None)
+        if instance is None:
+            instance = Booking.objects.filter(
+                trip=serializer.validated_data["trip"],
+                passenger=request.user,
+            ).order_by("-updated_at").first()
+        out = self.get_serializer(instance)
+        headers = self.get_success_headers(out.data)
+        return Response(out.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         booking = self.get_object()
         if booking.status != Booking.Status.CONFIRMED:
-            return Response({"detail": "Réservation non annulable."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Réservation non annulable."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         booking.status = Booking.Status.CANCELLED
         booking.save(update_fields=["status"])
@@ -80,23 +123,34 @@ class BookingViewSet(viewsets.ModelViewSet):
         trip.seats_available += booking.seats
         trip.save(update_fields=["seats_available"])
 
-        # Notifications
-        from notifications.utils import send_notification
+        # Supprimer l’ancien paiement lié pour permettre un nouveau paiement
+        if hasattr(booking, "payment"):
+            try:
+                booking.payment.delete()
+            except Exception:
+                pass
 
         send_notification(
             user=trip.driver,
             title="Réservation annulée",
-            message=f"{booking.passenger.username} a annulé sa réservation ({booking.seats} place(s)) sur {trip.origin_city} → {trip.destination_city}.",
-            type="BOOKING"
+            message=(
+                f"{booking.passenger.username} a annulé sa réservation "
+                f"({booking.seats} place(s)) sur {trip.origin_city} → "
+                f"{trip.destination_city}."
+            ),
+            type="BOOKING",
         )
         send_notification(
             user=booking.passenger,
             title="Réservation annulée",
-            message=f"Votre réservation pour {trip.origin_city} → {trip.destination_city} a été annulée.",
-            type="BOOKING"
+            message=(
+                f"Votre réservation pour {trip.origin_city} → "
+                f"{trip.destination_city} a été annulée."
+            ),
+            type="BOOKING",
         )
 
         return Response({
             "detail": "Réservation annulée.",
-            "seats_available": trip.seats_available
+            "seats_available": trip.seats_available,
         })

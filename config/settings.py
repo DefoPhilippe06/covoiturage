@@ -155,3 +155,25 @@ SPECTACULAR_SETTINGS = {
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "Covoiturage <noreply@covoiturage.local>"
+
+# Paiements mobile money
+PAYMENT_MODE = os.getenv("PAYMENT_MODE", "sandbox")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+
+ORANGE_CLIENT_ID = os.getenv("ORANGE_CLIENT_ID", "")
+ORANGE_CLIENT_SECRET = os.getenv("ORANGE_CLIENT_SECRET", "")
+ORANGE_MERCHANT_KEY = os.getenv("ORANGE_MERCHANT_KEY", "")
+ORANGE_API_URL = os.getenv(
+    "ORANGE_API_URL",
+    "https://api.orange.com/orange-money-webpay/cm/v1",
+)
+
+MTN_SUBSCRIPTION_KEY = os.getenv("MTN_SUBSCRIPTION_KEY", "")
+MTN_API_USER = os.getenv("MTN_API_USER", "")
+MTN_API_KEY = os.getenv("MTN_API_KEY", "")
+MTN_TARGET_ENV = os.getenv("MTN_TARGET_ENV", "sandbox")
+MTN_API_URL = os.getenv(
+    "MTN_API_URL",
+    "https://sandbox.momodeveloper.mtn.com",
+)

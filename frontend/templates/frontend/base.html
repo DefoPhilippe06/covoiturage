@@ -236,9 +236,13 @@ document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
 function openModal(htmlContent) {
     const overlay = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
+
+    window.__modalGen = (window.__modalGen || 0) + 1;
+
     content.innerHTML = htmlContent;
     overlay.classList.remove('hidden');
     overlay.classList.add('flex');
+
     requestAnimationFrame(() => {
         content.classList.remove('scale-95', 'opacity-0');
         content.classList.add('scale-100', 'opacity-100');
@@ -247,9 +251,15 @@ function openModal(htmlContent) {
 function closeModal() {
     const overlay = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
+
     content.classList.add('scale-95', 'opacity-0');
     content.classList.remove('scale-100', 'opacity-100');
+
+    const generation = (window.__modalGen = (window.__modalGen || 0) + 1);
+
     setTimeout(() => {
+        if (window.__modalGen !== generation) return;
+        if (content.classList.contains('opacity-100')) return;
         overlay.classList.add('hidden');
         overlay.classList.remove('flex');
         content.innerHTML = '';
@@ -260,6 +270,45 @@ function logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     window.location.href = '/login/';
+}
+/* JWT helper — refresh auto */
+async function apiFetch(url, options = {}) {
+    const opts = { ...options };
+    opts.headers = { ...(opts.headers || {}) };
+
+    let token = localStorage.getItem('access_token');
+    if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+
+    let res = await fetch(url, opts);
+
+    // Token expiré → refresh
+    if (res.status === 401) {
+        const refresh = localStorage.getItem('refresh_token');
+        if (!refresh) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login/';
+            return res;
+        }
+        const refreshRes = await fetch('/api/auth/refresh/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh })
+        });
+        if (!refreshRes.ok) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login/';
+            return res;
+        }
+        const data = await refreshRes.json();
+        localStorage.setItem('access_token', data.access);
+        if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+
+        opts.headers['Authorization'] = 'Bearer ' + data.access;
+        res = await fetch(url, opts);
+    }
+    return res;
 }
 
 /* Profile */
@@ -320,9 +369,8 @@ async function saveProfile() {
     formData.append('phone', document.getElementById('prof-phone').value);
     const fileInput = document.getElementById('avatar-input');
     if (fileInput && fileInput.files[0]) formData.append('avatar', fileInput.files[0]);
-    const res = await fetch('/api/auth/profile/', {
+    const res = await apiFetch('/api/auth/profile/', {
         method: 'PATCH',
-        headers: { 'Authorization': 'Bearer ' + token },
         body: formData
     });
     if (res.ok) { closeModal(); location.reload(); }
@@ -343,7 +391,7 @@ async function openNotifications() {
         <div id="notif-list"><p class="text-muted text-sm text-center py-6">Chargement...</p></div>
     `);
     try {
-        const res = await fetch('/api/notifications/', { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await apiFetch('/api/notifications/');
         const data = await res.json();
         const notifs = data.results || data;
         if (!notifs.length) {
@@ -355,7 +403,7 @@ async function openNotifications() {
                     <p class="text-xs text-muted mt-0.5">${n.message}</p>
                 </div>
             `).join('');
-            fetch('/api/notifications/mark_all_read/', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            apiFetch('/api/notifications/mark_all_read/', { method: 'POST' });
             document.getElementById('notif-badge')?.classList.add('hidden');
         }
     } catch {
@@ -366,7 +414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('access_token');
     if (!token) return;
     try {
-        const res = await fetch('/api/notifications/', { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await apiFetch('/api/notifications/');
         const data = await res.json();
         const notifs = data.results || data;
         if (notifs.filter(n => !n.is_read).length > 0) {
@@ -441,9 +489,9 @@ async function submitVehicle() {
         seats: parseInt(seats),
         year: parseInt(document.getElementById('veh-year').value) || null
     };
-    const res = await fetch('/api/vehicles/', {
+    const res = await apiFetch('/api/vehicles/', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     });
     const data = await res.json();
@@ -472,7 +520,7 @@ async function openPublishModal() {
     if (!token) { window.location.href = '/login/'; return; }
     let vehiclesOptions = '<option value="">Chargement...</option>';
     try {
-        const res = await fetch('/api/vehicles/', { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await apiFetch('/api/vehicles/');
         const data = await res.json();
         const vehicles = data.results || data;
         vehiclesOptions = vehicles.length
@@ -534,9 +582,9 @@ async function submitPublish() {
         return;
     }
     const token = localStorage.getItem('access_token');
-    const res = await fetch('/api/trips/', {
+    const res = await apiFetch('/api/trips/', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             vehicle: parseInt(vehicle),
             origin_city: origin,

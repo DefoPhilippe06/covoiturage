@@ -64,9 +64,7 @@ function showChat() {
 async function loadConversations() {
     if (!token()) { window.location.href = '/login/'; return; }
     try {
-        const res = await fetch('/api/conversations/', {
-            headers: { 'Authorization': 'Bearer ' + token() }
-        });
+        const res = await apiFetch('/api/conversations/');
         const data = await res.json();
         const convs = data.results || data;
         const el = document.getElementById('conv-list');
@@ -105,9 +103,7 @@ async function openConversation(id) {
     document.getElementById('chat-panel').classList.add('flex');
     document.getElementById('chat-panel').classList.remove('hidden');
 
-    const res = await fetch('/api/conversations/' + id + '/', {
-        headers: { 'Authorization': 'Bearer ' + token() }
-    });
+    const res = await apiFetch('/api/conversations/' + id + '/');
     const conv = await res.json();
     const names = (conv.participants_usernames || []).join(', ');
     document.getElementById('chat-header').innerHTML = `
@@ -138,12 +134,9 @@ async function sendMessage() {
     const input = document.getElementById('msg-input');
     const content = input.value.trim();
     if (!content || !currentConvId) return;
-    const res = await fetch(`/api/conversations/${currentConvId}/send_message/`, {
+    const res = await apiFetch(`/api/conversations/${currentConvId}/send_message/`, {
         method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token(),
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
     });
     if (res.ok) {

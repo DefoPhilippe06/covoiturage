@@ -146,61 +146,114 @@ function openBookModal() {
 async function submitBooking() {
     const seatsEl = document.getElementById('book-seats');
     const seats = seatsEl ? seatsEl.value : 1;
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+
+    if (!localStorage.getItem('access_token')) {
         alert('Session expirée. Reconnectez-vous.');
         window.location.href = '/login/';
         return;
     }
+
     try {
-        const res = await fetch('/api/bookings/', {
+        const res = await apiFetch('/api/bookings/', {
             method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ trip: {{ trip.id }}, seats: parseInt(seats) })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                trip: {{ trip.id }},
+                seats: parseInt(seats)
+            })
         });
+
         const text = await res.text();
         let data;
-        try { data = JSON.parse(text); } catch {
-            alert('Erreur serveur. Vérifiez si vous avez déjà réservé ce trajet.');
-            return;
-        }
-        if (!res.ok) {
-            alert(data.detail || JSON.stringify(data));
-            return;
-        }
         try {
-            const payRes = await fetch('/api/payments/', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ booking: data.id, provider: 'ORANGE_MONEY' })
-            });
-            const payData = await payRes.json();
-            if (payRes.ok && payData.id) {
-                await fetch('/api/payments/' + payData.id + '/simulate_success/', {
-                    method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-            }
-        } catch (e) { console.warn(e); }
+            data = JSON.parse(text);
+        } catch {
+            alert('Erreur serveur.');
+            return;
+        }
 
-        closeModal();
+        if (!res.ok) {
+            alert(data.detail || data.non_field_errors || JSON.stringify(data));
+            return;
+        }
+
+        // Ne PAS appeler closeModal() ici : openModal remplace le contenu
+        openModal(`
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">Paiement</h2>
+                <button onclick="closeModal()" class="p-1.5 rounded-full hover:bg-white/10">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <p class="text-muted text-sm mb-5">${seats} place(s) · ${data.total_price} XAF</p>
+            <div class="mb-4">
+                <label class="block text-sm text-muted mb-1.5">Moyen de paiement</label>
+                <select id="pay-provider" class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                    <option value="ORANGE_MONEY">Orange Money</option>
+                    <option value="MTN_MOMO">MTN MoMo</option>
+                </select>
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm text-muted mb-1.5">Numéro de téléphone</label>
+                <input id="pay-phone" type="text" placeholder="+2376XXXXXXXX"
+                    class="w-full px-4 py-3 rounded-xl elevated border border-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+            </div>
+            <button onclick="submitPayment(${data.id}, '${data.total_price}')"
+                    class="w-full py-3.5 rounded-xl bg-brand-500 text-black font-bold hover:bg-brand-400 transition">
+                Payer
+            </button>
+        `);
+    } catch (e) {
+        alert('Erreur réseau : ' + e.message);
+    }
+}
+
+async function submitPayment(bookingId, totalPrice) {
+    const provider = document.getElementById('pay-provider')?.value || 'ORANGE_MONEY';
+    const phone = document.getElementById('pay-phone')?.value.trim() || '';
+
+    try {
+        const payRes = await apiFetch('/api/payments/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking: bookingId,
+                provider: provider,
+                phone: phone
+            })
+        });
+        const payData = await payRes.json();
+
+        if (!payRes.ok) {
+            alert(payData.detail || JSON.stringify(payData));
+            return;
+        }
+
+        if (payData.id) {
+            await apiFetch('/api/payments/' + payData.id + '/simulate_success/', {
+                method: 'POST'
+            });
+        }
+
         openModal(`
             <div class="text-center py-4">
                 <div class="w-16 h-16 rounded-full bg-brand-500/20 flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
                 </div>
-                <h2 class="text-xl font-bold mb-2">Réservation confirmée</h2>
-                <p class="text-muted text-sm mb-6">${seats} place(s) · ${data.total_price} XAF</p>
-                <button onclick="closeModal(); location.href='/my-bookings/'" class="px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
+                <h2 class="text-xl font-bold mb-2">Paiement confirmé</h2>
+                <p class="text-muted text-sm mb-6">${totalPrice} XAF · ${provider === 'MTN_MOMO' ? 'MTN MoMo' : 'Orange Money'}</p>
+                <button onclick="closeModal(); location.href='/my-bookings/'"
+                        class="px-6 py-2.5 rounded-full bg-brand-500 text-black font-bold text-sm">
                     Voir mes réservations
                 </button>
             </div>
         `);
     } catch (e) {
-        alert('Erreur réseau : ' + e.message);
+        alert('Erreur paiement : ' + e.message);
     }
 }
 </script>

@@ -26,9 +26,7 @@ async function loadVehicles() {
     const token = localStorage.getItem('access_token');
     if (!token) { window.location.href = '/login/'; return; }
     try {
-        const res = await fetch('/api/vehicles/', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const res = await apiFetch('/api/vehicles/');
         const data = await res.json();
         const vehicles = data.results || data;
         const el = document.getElementById('vehicles-list');

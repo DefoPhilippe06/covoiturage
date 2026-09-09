@@ -92,8 +92,8 @@ async function confirmComplete(tripId) {
     const token = localStorage.getItem('access_token');
     if (!token) { alert('Session expirée.'); window.location.href = '/login/'; return; }
     try {
-        const res = await fetch(`/api/trips/${tripId}/complete/`, {
-            method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        const res = await apiFetch(`/api/trips/${tripId}/complete/`, {
+            method: 'POST'
         });
         const data = await res.json();
         if (res.ok) { closeModal(); location.reload(); }
@@ -116,8 +116,8 @@ async function confirmCancel(id) {
     const token = localStorage.getItem('access_token');
     if (!token) { window.location.href = '/login/'; return; }
     try {
-        const res = await fetch(`/api/bookings/${id}/cancel/`, {
-            method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        const res = await apiFetch(`/api/bookings/${id}/cancel/`, {
+            method: 'POST'
         });
         if (res.ok) { closeModal(); location.reload(); }
         else { const err = await res.json(); alert(err.detail || 'Erreur'); }
@@ -165,9 +165,9 @@ async function submitReview(tripId, driverId) {
     if (!rating || rating < 1) { errorEl.textContent = 'Choisissez une note de 1 à 5.'; errorEl.classList.remove('hidden'); return; }
     const token = localStorage.getItem('access_token');
     try {
-        const res = await fetch('/api/reviews/', {
+        const res = await apiFetch('/api/reviews/', {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ trip: tripId, reviewed_user: driverId, rating, comment })
         });
         const text = await res.text();
