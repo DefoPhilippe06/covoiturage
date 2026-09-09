@@ -2,15 +2,20 @@
 {% block title %}Mes véhicules — Covoiturage{% endblock %}
 
 {% block content %}
-<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
-    <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-bold">Mes véhicules</h1>
-        <button onclick="openAddVehicleModal()" class="px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10 sm:py-14">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">Mes véhicules</h1>
+            <p class="text-sm text-muted mt-2">Gérez vos voitures pour publier des trajets</p>
+        </div>
+        <button onclick="openAddVehicleModal()"
+                class="inline-flex justify-center px-5 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition shrink-0">
             + Ajouter
         </button>
     </div>
-    <div id="vehicles-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <p class="text-muted col-span-full text-center py-12">Chargement...</p>
+
+    <div id="vehicles-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+        <p class="text-muted col-span-full text-center py-16 text-sm">Chargement...</p>
     </div>
 </section>
 {% endblock %}
@@ -20,28 +25,53 @@
 async function loadVehicles() {
     const token = localStorage.getItem('access_token');
     if (!token) { window.location.href = '/login/'; return; }
-    const res = await fetch('/api/vehicles/', {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const data = await res.json();
-    const vehicles = data.results || data;
-    const el = document.getElementById('vehicles-list');
+    try {
+        const res = await apiFetch('/api/vehicles/');
+        const data = await res.json();
+        const vehicles = data.results || data;
+        const el = document.getElementById('vehicles-list');
 
-    if (!vehicles.length) {
-        el.innerHTML = `
-            <div class="col-span-full text-center py-20">
-                <p class="text-lg font-medium mb-2">Aucun véhicule</p>
-                <button onclick="openAddVehicleModal()" class="text-brand-500 font-medium hover:underline">Ajouter mon premier véhicule →</button>
-            </div>`;
-        return;
+        if (!vehicles.length) {
+            el.innerHTML = `
+                <div class="col-span-full text-center py-24">
+                    <div class="w-20 h-20 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-5">
+                        <svg class="w-9 h-9 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1"/>
+                        </svg>
+                    </div>
+                    <p class="text-lg font-semibold mb-2">Aucun véhicule</p>
+                    <p class="text-sm text-muted mb-6">Ajoutez une voiture pour publier des trajets.</p>
+                    <button onclick="openAddVehicleModal()" class="px-6 py-2.5 rounded-full bg-brand-500 text-black text-sm font-bold hover:bg-brand-400 transition">
+                        Ajouter mon premier véhicule
+                    </button>
+                </div>`;
+            return;
+        }
+
+        el.innerHTML = vehicles.map(v => `
+            <div class="card rounded-3xl p-6 border border-white/5 hover:border-brand-500/30 transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-bold text-lg tracking-tight">${v.brand} ${v.model}</p>
+                        <p class="text-sm text-muted mt-1.5">${v.color || '—'} · ${v.year || '—'} · ${v.seats} places</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-brand-500/10 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-5 pt-4 border-t border-white/5">
+                    <p class="text-[11px] uppercase tracking-wider text-muted font-semibold mb-1">Plaque</p>
+                    <p class="font-semibold tracking-wide">${v.plate_number}</p>
+                </div>
+            </div>
+        `).join('');
+    } catch {
+        document.getElementById('vehicles-list').innerHTML =
+            '<p class="col-span-full text-center text-red-400 py-12 text-sm">Erreur de chargement</p>';
     }
-    el.innerHTML = vehicles.map(v => `
-        <div class="card rounded-2xl p-5">
-            <p class="font-semibold text-lg">${v.brand} ${v.model}</p>
-            <p class="text-sm text-muted mt-1">${v.color || '—'} · ${v.year || '—'} · ${v.seats} places</p>
-            <p class="text-sm font-medium mt-3">${v.plate_number}</p>
-        </div>
-    `).join('');
 }
 document.addEventListener('DOMContentLoaded', loadVehicles);
 </script>

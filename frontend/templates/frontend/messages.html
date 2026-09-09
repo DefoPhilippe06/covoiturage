@@ -2,30 +2,39 @@
 {% block title %}Messages — Covoiturage{% endblock %}
 
 {% block content %}
-<section class="w-full px-6 sm:px-10 lg:px-16 py-8 h-[calc(100vh-8rem)]">
-    <h1 class="text-2xl font-bold mb-6">Messages</h1>
+<section class="w-full px-4 sm:px-6 lg:px-16 py-6 sm:py-8">
+    <div class="mb-5 sm:mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Messages</h1>
+        <p class="text-sm text-muted mt-1">Conversations liées à vos trajets</p>
+    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
-        <!-- Liste conversations -->
-        <div class="card rounded-2xl overflow-hidden flex flex-col lg:col-span-1">
-            <div class="px-4 py-3 border-b border-soft font-medium text-sm text-muted">Conversations</div>
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-12rem)] min-h-[420px]">
+
+        <!-- Liste -->
+        <div id="conv-panel" class="card rounded-3xl overflow-hidden flex flex-col border border-white/5 lg:col-span-2">
+            <div class="px-5 py-4 border-b border-soft">
+                <p class="text-[11px] uppercase tracking-wider text-muted font-semibold">Conversations</p>
+            </div>
             <div id="conv-list" class="flex-1 overflow-y-auto">
-                <p class="text-muted text-sm text-center py-10">Chargement...</p>
+                <p class="text-muted text-sm text-center py-12">Chargement...</p>
             </div>
         </div>
 
-        <!-- Zone messages -->
-        <div class="card rounded-2xl overflow-hidden flex flex-col lg:col-span-2">
-            <div id="chat-header" class="px-4 py-3 border-b border-soft text-sm text-muted">
-                Sélectionnez une conversation
+        <!-- Chat -->
+        <div id="chat-panel" class="card rounded-3xl overflow-hidden flex flex-col border border-white/5 lg:col-span-3 hidden lg:flex">
+            <div id="chat-header" class="px-5 py-4 border-b border-soft flex items-center gap-3">
+                <button id="back-to-list" class="lg:hidden p-1.5 rounded-full hover:bg-white/5" onclick="showList()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <p class="text-sm text-muted truncate">Sélectionnez une conversation</p>
             </div>
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3">
-            </div>
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3"></div>
             <div id="chat-input-area" class="hidden p-4 border-t border-soft flex gap-2">
                 <input id="msg-input" type="text" placeholder="Écrire un message..."
-                       class="flex-1 px-4 py-2.5 rounded-xl elevated border border-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                       class="flex-1 px-4 py-3 rounded-2xl elevated border border-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40"
                        onkeydown="if(event.key==='Enter') sendMessage()">
-                <button onclick="sendMessage()" class="px-5 py-2.5 rounded-xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition">
+                <button onclick="sendMessage()"
+                        class="px-5 py-3 rounded-2xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition shrink-0">
                     Envoyer
                 </button>
             </div>
@@ -39,75 +48,100 @@
 let currentConvId = null;
 const token = () => localStorage.getItem('access_token');
 
+function showList() {
+    document.getElementById('conv-panel').classList.remove('hidden');
+    document.getElementById('chat-panel').classList.add('hidden');
+    document.getElementById('chat-panel').classList.remove('flex');
+}
+function showChat() {
+    if (window.innerWidth < 1024) {
+        document.getElementById('conv-panel').classList.add('hidden');
+        document.getElementById('chat-panel').classList.remove('hidden');
+        document.getElementById('chat-panel').classList.add('flex');
+    }
+}
+
 async function loadConversations() {
     if (!token()) { window.location.href = '/login/'; return; }
-    const res = await fetch('/api/conversations/', {
-        headers: { 'Authorization': 'Bearer ' + token() }
-    });
-    const data = await res.json();
-    const convs = data.results || data;
-    const el = document.getElementById('conv-list');
+    try {
+        const res = await apiFetch('/api/conversations/');
+        const data = await res.json();
+        const convs = data.results || data;
+        const el = document.getElementById('conv-list');
 
-    if (!convs.length) {
-        el.innerHTML = '<p class="text-muted text-sm text-center py-10">Aucune conversation.<br><span class="text-xs">Elles se créent à la réservation.</span></p>';
-        return;
+        if (!convs.length) {
+            el.innerHTML = `
+                <div class="text-center py-14 px-4">
+                    <p class="text-sm font-medium">Aucune conversation</p>
+                    <p class="text-xs text-muted mt-1">Elles se créent automatiquement à la réservation.</p>
+                </div>`;
+            return;
+        }
+
+        el.innerHTML = convs.map(c => {
+            const names = (c.participants_usernames || []).join(', ');
+            const last = c.messages && c.messages.length
+                ? c.messages[c.messages.length - 1].content.slice(0, 48)
+                : 'Aucun message';
+            return `
+                <button onclick="openConversation(${c.id})"
+                        class="w-full text-left px-5 py-4 hover:bg-white/[0.04] border-b border-soft transition ${currentConvId === c.id ? 'bg-white/[0.04]' : ''}">
+                    <p class="font-semibold text-sm truncate">${names}</p>
+                    <p class="text-xs text-muted truncate mt-1">${last}</p>
+                </button>`;
+        }).join('');
+    } catch {
+        document.getElementById('conv-list').innerHTML =
+            '<p class="text-red-400 text-sm text-center py-10">Erreur de chargement</p>';
     }
-
-    el.innerHTML = convs.map(c => {
-        const names = (c.participants_usernames || []).join(', ');
-        const last = c.messages && c.messages.length ? c.messages[c.messages.length - 1].content.slice(0, 40) : 'Aucun message';
-        return `
-            <button onclick="openConversation(${c.id})" class="w-full text-left px-4 py-3 hover:bg-white/5 border-b border-soft transition">
-                <p class="font-medium text-sm truncate">${names}</p>
-                <p class="text-xs text-muted truncate mt-0.5">${last}</p>
-            </button>`;
-    }).join('');
 }
 
 async function openConversation(id) {
     currentConvId = id;
+    showChat();
     document.getElementById('chat-input-area').classList.remove('hidden');
-    document.getElementById('chat-header').textContent = 'Conversation #' + id;
+    document.getElementById('chat-panel').classList.add('flex');
+    document.getElementById('chat-panel').classList.remove('hidden');
 
-    const res = await fetch('/api/conversations/' + id + '/', {
-        headers: { 'Authorization': 'Bearer ' + token() }
-    });
+    const res = await apiFetch('/api/conversations/' + id + '/');
     const conv = await res.json();
+    const names = (conv.participants_usernames || []).join(', ');
+    document.getElementById('chat-header').innerHTML = `
+        <button class="lg:hidden p-1.5 rounded-full hover:bg-white/5" onclick="showList()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <p class="text-sm font-semibold truncate">${names || 'Conversation #' + id}</p>
+    `;
+
     const msgs = conv.messages || [];
     const box = document.getElementById('chat-messages');
-
-    box.innerHTML = msgs.map(m => {
+    box.innerHTML = msgs.length ? msgs.map(m => {
         const mine = m.sender_username === '{{ user.username }}';
         return `
             <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
-                <div class="max-w-[75%] px-4 py-2 rounded-2xl text-sm ${mine ? 'bg-brand-500 text-black' : 'elevated'}">
-                    ${!mine ? `<p class="text-xs font-medium mb-0.5 opacity-70">${m.sender_username}</p>` : ''}
+                <div class="max-w-[80%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${mine ? 'bg-brand-500 text-black rounded-br-md' : 'elevated rounded-bl-md'}">
+                    ${!mine ? `<p class="text-[11px] font-semibold mb-0.5 opacity-70">${m.sender_username}</p>` : ''}
                     <p>${m.content}</p>
                 </div>
             </div>`;
-    }).join('') || '<p class="text-muted text-sm text-center py-8">Aucun message. Écrivez le premier !</p>';
+    }).join('') : '<p class="text-muted text-sm text-center py-12">Aucun message. Écrivez le premier !</p>';
 
     box.scrollTop = box.scrollHeight;
+    loadConversations();
 }
 
 async function sendMessage() {
     const input = document.getElementById('msg-input');
     const content = input.value.trim();
     if (!content || !currentConvId) return;
-
-    const res = await fetch(`/api/conversations/${currentConvId}/send_message/`, {
+    const res = await apiFetch(`/api/conversations/${currentConvId}/send_message/`, {
         method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token(),
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
     });
-
     if (res.ok) {
         input.value = '';
         openConversation(currentConvId);
-        loadConversations();
     } else {
         alert('Erreur envoi message');
     }

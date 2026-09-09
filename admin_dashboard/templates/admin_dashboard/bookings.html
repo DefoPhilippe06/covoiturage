@@ -1,45 +1,47 @@
 {% extends "admin_dashboard/base.html" %}
 
-{% block title %}Réservations — Covoiturage{% endblock %}
+{% block title %}Réservations — Admin{% endblock %}
 {% block page_title %}Réservations{% endblock %}
 
 {% block content %}
-<div class="card rounded-2xl border border-white/5 overflow-hidden">
-    <div class="px-6 py-4 border-b border-white/5">
-        <h2 class="font-semibold">Toutes les réservations ({{ bookings|length }})</h2>
+<div class="card-admin rounded-2xl overflow-hidden">
+    <div class="px-5 sm:px-6 py-4 border-b border-soft">
+        <h2 class="font-semibold text-sm sm:text-base">Toutes les réservations</h2>
+        <p class="text-xs text-sec mt-0.5">{{ bookings|length }} résultat{{ bookings|length|pluralize }}</p>
     </div>
+
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left min-w-[720px]">
             <thead>
-                <tr class="text-sec text-sm border-b border-white/5">
-                    <th class="px-6 py-3 font-medium">Passager</th>
-                    <th class="px-6 py-3 font-medium">Trajet</th>
-                    <th class="px-6 py-3 font-medium">Places</th>
-                    <th class="px-6 py-3 font-medium">Montant</th>
-                    <th class="px-6 py-3 font-medium">Date</th>
-                    <th class="px-6 py-3 font-medium">Statut</th>
+                <tr class="text-sec text-xs uppercase tracking-wider border-b border-soft">
+                    <th class="px-5 sm:px-6 py-3 font-semibold">Passager</th>
+                    <th class="px-5 sm:px-6 py-3 font-semibold">Trajet</th>
+                    <th class="px-5 sm:px-6 py-3 font-semibold">Places</th>
+                    <th class="px-5 sm:px-6 py-3 font-semibold">Montant</th>
+                    <th class="px-5 sm:px-6 py-3 font-semibold">Date</th>
+                    <th class="px-5 sm:px-6 py-3 font-semibold">Statut</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-white/5">
+            <tbody class="divide-y" style="border-color: var(--border)">
                 {% for booking in bookings %}
                 <tr class="hover-bg transition">
-                    <td class="px-6 py-4 font-medium">{{ booking.passenger.username }}</td>
-                    <td class="px-6 py-4 text-sec">{{ booking.trip.origin_city }} → {{ booking.trip.destination_city }}</td>
-                    <td class="px-6 py-4">{{ booking.seats }}</td>
-                    <td class="px-6 py-4 font-medium">{{ booking.total_price }} XAF</td>
-                    <td class="px-6 py-4 text-sec text-sm">{{ booking.created_at|date:"d/m/Y H:i" }}</td>
-                    <td class="px-6 py-4">
-                        <span class="text-xs px-2.5 py-1 rounded-full 
-                            {% if booking.status == 'CONFIRMED' %}bg-green-500/20 text-green-400
-                            {% elif booking.status == 'CANCELLED' %}bg-red-500/20 text-red-400
-                            {% elif booking.status == 'COMPLETED' %}bg-blue-500/20 text-blue-400
-                            {% else %}bg-yellow-500/20 text-yellow-400{% endif %}">
+                    <td class="px-5 sm:px-6 py-4 font-medium text-sm">{{ booking.passenger.username }}</td>
+                    <td class="px-5 sm:px-6 py-4 text-sm text-sec">{{ booking.trip.origin_city }} → {{ booking.trip.destination_city }}</td>
+                    <td class="px-5 sm:px-6 py-4 text-sm">{{ booking.seats }}</td>
+                    <td class="px-5 sm:px-6 py-4 text-sm font-medium">{{ booking.total_price }} XAF</td>
+                    <td class="px-5 sm:px-6 py-4 text-sm text-sec">{{ booking.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="px-5 sm:px-6 py-4">
+                        <span class="text-[10px] font-semibold px-2.5 py-1 rounded-full
+                            {% if booking.status == 'CONFIRMED' %}bg-green-500/15 text-green-400
+                            {% elif booking.status == 'CANCELLED' %}bg-red-500/15 text-red-400
+                            {% elif booking.status == 'COMPLETED' %}bg-blue-500/15 text-blue-400
+                            {% else %}bg-yellow-500/15 text-yellow-400{% endif %}">
                             {{ booking.get_status_display }}
                         </span>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" class="px-6 py-10 text-center text-sec">Aucune réservation</td></tr>
+                <tr><td colspan="6" class="px-6 py-12 text-center text-sec text-sm">Aucune réservation</td></tr>
                 {% endfor %}
             </tbody>
         </table>

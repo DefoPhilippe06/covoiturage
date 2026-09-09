@@ -1,71 +1,105 @@
 {% extends "frontend/base.html" %}
 {% load stars_tags %}
+
 {% block title %}Rechercher un trajet — Covoiturage{% endblock %}
 
 {% block content %}
-<section class="w-full px-6 sm:px-10 lg:px-16 py-10">
-    <h1 class="text-3xl font-bold mb-8">Rechercher un trajet</h1>
+<section class="w-full px-6 sm:px-10 lg:px-16 py-10 sm:py-14">
 
-    <form method="get" class="card rounded-2xl p-5 mb-10">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="mb-8 sm:mb-10">
+        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">Rechercher</h1>
+        <p class="text-sm text-muted mt-2">Trouvez le trajet qui vous convient</p>
+    </div>
+
+    <!-- Filtres -->
+    <form method="get" class="card rounded-3xl p-5 sm:p-6 mb-8 border border-white/5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-                <label class="block text-xs text-muted mb-1.5 font-medium">Départ</label>
+                <label class="block text-[11px] uppercase tracking-wider text-muted mb-2 font-semibold">Départ</label>
                 <input type="text" name="origin" value="{{ origin }}" placeholder="Ville de départ"
-                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm">
+                       class="w-full px-4 py-3.5 rounded-2xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/40 text-sm transition">
             </div>
             <div>
-                <label class="block text-xs text-muted mb-1.5 font-medium">Destination</label>
+                <label class="block text-[11px] uppercase tracking-wider text-muted mb-2 font-semibold">Arrivée</label>
                 <input type="text" name="destination" value="{{ destination }}" placeholder="Ville d'arrivée"
-                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm">
+                       class="w-full px-4 py-3.5 rounded-2xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/40 text-sm transition">
             </div>
             <div>
-                <label class="block text-xs text-muted mb-1.5 font-medium">Date</label>
+                <label class="block text-[11px] uppercase tracking-wider text-muted mb-2 font-semibold">Date</label>
                 <input type="date" name="date" value="{{ date }}"
-                       class="w-full px-4 py-3 rounded-xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-sm">
+                       class="w-full px-4 py-3.5 rounded-2xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/40 text-sm transition">
             </div>
             <div class="flex items-end">
-                <button type="submit" class="w-full py-3 rounded-xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition">
+                <button type="submit"
+                        class="w-full py-3.5 rounded-2xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 active:scale-[0.98] transition">
                     Rechercher
                 </button>
             </div>
         </div>
     </form>
 
-    <p class="text-muted text-sm mb-6">{{ trips|length }} trajet{{ trips|length|pluralize }} trouvé{{ trips|length|pluralize }}</p>
+    <p class="text-sm text-muted mb-5">
+        <span class="font-semibold text-[var(--text)]">{{ trips|length }}</span>
+        trajet{{ trips|length|pluralize }} trouvé{{ trips|length|pluralize }}
+    </p>
 
-    <div class="space-y-4">
+    <div class="space-y-3 sm:space-y-4">
         {% for trip in trips %}
-        <a href="{% url 'frontend:trip_detail' trip.pk %}" class="card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-brand-500/30 transition group">
-            <div class="flex-1">
-                <p class="font-semibold text-lg group-hover:text-brand-500 transition">{{ trip.origin_city }} → {{ trip.destination_city }}</p>
-                <p class="text-sm text-muted mt-1">{{ trip.departure_datetime|date:"D d M Y · H:i" }} · {{ trip.driver.username }} · <span class="inline-flex gap-0.5 text-sm">
-                        {% for filled in trip.driver.rating_avg|star_list %}
-                        {% if filled %}
-                        <span class="text-yellow-400">★</span>
-                        {% else %}
-                        <span class="text-white/20">★</span>
-                        {% endif %}
-                        {% endfor %}
-                        </span>
-                </p>
-            </div>
-            <div class="flex items-center gap-6">
-                <div class="text-right">
-                    <p class="text-xl font-bold text-brand-500">{{ trip.price_per_seat|floatformat:0 }} <span class="text-sm font-normal">{{ trip.currency }}</span></p>
-                    <p class="text-xs text-muted">{{ trip.seats_available }} place{{ trip.seats_available|pluralize }}</p>
+        <a href="{% url 'frontend:trip_detail' trip.pk %}"
+           class="card rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-white/5 hover:border-brand-500/35 transition-all duration-300 group animate-in">
+
+            <div class="flex items-start gap-4 min-w-0 flex-1">
+                {% if trip.driver.avatar %}
+                <img src="{{ trip.driver.avatar.url }}" class="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0 hidden sm:block" alt="">
+                {% else %}
+                <div class="w-11 h-11 rounded-full bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center text-sm font-bold shrink-0 hidden sm:flex">
+                    {{ trip.driver.username|first|upper }}
                 </div>
-                <span class="hidden sm:inline-block px-4 py-2 rounded-full bg-brand-500/15 text-brand-500 text-sm font-medium">Voir →</span>
+                {% endif %}
+
+                <div class="min-w-0">
+                    <p class="font-bold text-lg tracking-tight group-hover:text-brand-500 transition truncate">
+                        {{ trip.origin_city }} <span class="text-muted font-normal">→</span> {{ trip.destination_city }}
+                    </p>
+                    <p class="text-sm text-muted mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span>{{ trip.departure_datetime|date:"D d M · H:i" }}</span>
+                        <span class="text-white/20">·</span>
+                        <span>{{ trip.driver.username }}</span>
+                        <span class="inline-flex gap-0.5">
+                            {% for filled in trip.driver.rating_avg|star_list %}
+                                {% if filled %}<span class="text-yellow-400 text-xs">★</span>
+                                {% else %}<span class="text-white/15 text-xs">★</span>{% endif %}
+                            {% endfor %}
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 shrink-0">
+                <div class="text-left sm:text-right">
+                    <p class="text-xl sm:text-2xl font-bold text-brand-500 leading-none">
+                        {{ trip.price_per_seat|floatformat:0 }}
+                        <span class="text-xs font-medium text-muted">{{ trip.currency }}</span>
+                    </p>
+                    <p class="text-xs text-muted mt-1.5">
+                        {{ trip.seats_available }} place{{ trip.seats_available|pluralize }}
+                    </p>
+                </div>
+                <span class="hidden md:inline-flex items-center px-4 py-2 rounded-full bg-brand-500/10 text-brand-500 text-sm font-semibold group-hover:bg-brand-500 group-hover:text-black transition">
+                    Voir
+                </span>
             </div>
         </a>
+
         {% empty %}
-        <div class="col-span-full text-center py-20 animate-in">
-            <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="text-center py-24 animate-in">
+            <div class="w-20 h-20 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-5">
+                <svg class="w-9 h-9 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
             </div>
-            <p class="text-lg font-medium">Aucun trajet trouvé</p>
-            <p class="text-sm text-muted mt-1">Essayez d’autres villes ou une autre date.</p>
+            <p class="text-lg font-semibold">Aucun trajet trouvé</p>
+            <p class="text-sm text-muted mt-2">Essayez d’autres villes ou une autre date.</p>
         </div>
         {% endfor %}
     </div>

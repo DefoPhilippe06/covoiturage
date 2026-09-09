@@ -2,532 +2,178 @@
 {% load stars_tags %}
 
 {% block title %}Dashboard — Covoiturage{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
-
+{% block page_title %}Tableau de bord{% endblock %}
 
 {% block content %}
-
-<!-- ========================= -->
-<!-- STATS CARDS -->
-<!-- ========================= -->
-
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8 sm:mb-10">
-
-    <!-- Utilisateurs -->
-    <div class="card rounded-2xl p-5 sm:p-6 border border-white/5">
-        <p class="text-sec text-sm mb-1">Utilisateurs</p>
-
-        <p class="text-2xl sm:text-3xl font-bold">
-            {{ total_users }}
-        </p>
-
-        <p class="text-xs text-sec mt-2">
-            {{ total_drivers }} conducteurs
-        </p>
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3 sm:gap-4 mb-8">
+    <div class="card-admin rounded-2xl p-4 sm:p-5">
+        <p class="text-[11px] uppercase tracking-wider text-sec font-semibold mb-1">Utilisateurs</p>
+        <p class="text-2xl sm:text-3xl font-bold tracking-tight">{{ total_users }}</p>
+        <p class="text-xs text-sec mt-1.5">{{ total_drivers }} conducteurs</p>
     </div>
-
-
-    <!-- Trajets -->
-    <div class="card rounded-2xl p-5 sm:p-6 border border-white/5">
-        <p class="text-sec text-sm mb-1">Trajets</p>
-
-        <p class="text-2xl sm:text-3xl font-bold">
-            {{ total_trips }}
-        </p>
-
-        <p class="text-xs accent mt-2">
-            {{ published_trips }} publiés
-        </p>
+    <div class="card-admin rounded-2xl p-4 sm:p-5">
+        <p class="text-[11px] uppercase tracking-wider text-sec font-semibold mb-1">Trajets</p>
+        <p class="text-2xl sm:text-3xl font-bold tracking-tight">{{ total_trips }}</p>
+        <p class="text-xs accent mt-1.5">{{ published_trips }} publiés</p>
     </div>
-
-
-    <!-- Réservations -->
-    <div class="card rounded-2xl p-5 sm:p-6 border border-white/5">
-        <p class="text-sec text-sm mb-1">Réservations</p>
-
-        <p class="text-2xl sm:text-3xl font-bold">
-            {{ total_bookings }}
-        </p>
-
-        <p class="text-xs accent mt-2">
-            {{ confirmed_bookings }} confirmées
-        </p>
+    <div class="card-admin rounded-2xl p-4 sm:p-5">
+        <p class="text-[11px] uppercase tracking-wider text-sec font-semibold mb-1">Réservations</p>
+        <p class="text-2xl sm:text-3xl font-bold tracking-tight">{{ total_bookings }}</p>
+        <p class="text-xs accent mt-1.5">{{ confirmed_bookings }} confirmées</p>
     </div>
-
-
-    <!-- Véhicules -->
-    <div class="card rounded-2xl p-5 sm:p-6 border border-white/5">
-        <p class="text-sec text-sm mb-1">Véhicules</p>
-
-        <p class="text-2xl sm:text-3xl font-bold">
-            {{ total_vehicles }}
-        </p>
+    <div class="card-admin rounded-2xl p-4 sm:p-5">
+        <p class="text-[11px] uppercase tracking-wider text-sec font-semibold mb-1">Véhicules</p>
+        <p class="text-2xl sm:text-3xl font-bold tracking-tight">{{ total_vehicles }}</p>
     </div>
-
-
-    <!-- Avis -->
-    <div class="card rounded-2xl p-5 sm:p-6 border border-white/5">
-        <p class="text-sec text-sm mb-1">Avis</p>
-
-        <p class="text-2xl sm:text-3xl font-bold">
-            {{ total_reviews }}
-        </p>
+    <div class="card-admin rounded-2xl p-4 sm:p-5">
+        <p class="text-[11px] uppercase tracking-wider text-sec font-semibold mb-1">Avis</p>
+        <p class="text-2xl sm:text-3xl font-bold tracking-tight">{{ total_reviews }}</p>
     </div>
-
-
-    <!-- Revenus -->
-    <div class="card rounded-2xl p-5 sm:p-6 border border-white/5">
-        <p class="text-sec text-sm mb-1">
-            Revenus (simulés)
-        </p>
-
-        <p class="text-2xl sm:text-3xl font-bold">
-            {{ total_revenue }}
-            <span class="text-sm font-normal">
-                XAF
-            </span>
-        </p>
+    <div class="card-admin rounded-2xl p-4 sm:p-5">
+        <p class="text-[11px] uppercase tracking-wider text-sec font-semibold mb-1">Revenus</p>
+        <p class="text-xl sm:text-2xl font-bold tracking-tight">{{ total_revenue|default:0 }} <span class="text-xs font-normal text-sec">XAF</span></p>
     </div>
-
-
-    <!-- Réservations 7 jours -->
-    <div class="card rounded-2xl p-5 sm:p-6 border border-white/5">
-        <p class="text-sec text-sm mb-1">
-            Réservations (7j)
-        </p>
-
-        <p class="text-2xl sm:text-3xl font-bold">
-            {{ bookings_last_7_days }}
-        </p>
+    <div class="card-admin rounded-2xl p-4 sm:p-5 col-span-2 sm:col-span-1">
+        <p class="text-[11px] uppercase tracking-wider text-sec font-semibold mb-1">7 derniers jours</p>
+        <p class="text-2xl sm:text-3xl font-bold tracking-tight">{{ bookings_last_7_days|default:0 }}</p>
+        <p class="text-xs text-sec mt-1.5">réservations</p>
     </div>
-
 </div>
 
-
-<!-- ========================= -->
-<!-- GRAPHIQUE -->
-<!-- ========================= -->
-
-<div class="card rounded-2xl border border-white/5 p-6 mb-8">
-
-    <h2 class="font-semibold mb-4">
-        Activité récente
-    </h2>
-
-    <div style="position: relative; height: 260px;">
-
+<!-- Chart -->
+<div class="card-admin rounded-2xl p-5 sm:p-6 mb-8">
+    <h2 class="font-semibold text-sm sm:text-base mb-4">Vue d’ensemble</h2>
+    <div class="relative h-56 sm:h-64">
         <canvas id="activityChart"></canvas>
-
     </div>
-
 </div>
 
-
-<!-- ========================= -->
-<!-- TABLEAUX RÉCENTS -->
-<!-- ========================= -->
-
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8 mb-8">
-
-
-    <!-- Trajets récents -->
-    <div class="card rounded-2xl border border-white/5 overflow-hidden">
-
-        <div class="px-5 sm:px-6 py-4 border-b border-white/5 flex items-center justify-between">
-
-            <h2 class="font-semibold">
-                Trajets récents
-            </h2>
-
-            <a href="{% url 'admin_dashboard:trips' %}"
-               class="text-sm accent hover:underline">
-
-                Voir tout
-
-            </a>
-
+<!-- Tables -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6 mb-8">
+    <div class="card-admin rounded-2xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-soft flex items-center justify-between">
+            <h2 class="font-semibold text-sm">Trajets récents</h2>
+            <a href="{% url 'admin_dashboard:trips' %}" class="text-xs accent font-semibold hover:underline">Voir tout</a>
         </div>
-
-
-        <div class="divide-y divide-white/5">
-
+        <div class="divide-y" style="border-color: var(--border)">
             {% for trip in recent_trips %}
-
-            <div class="px-5 sm:px-6 py-4 hover-bg transition flex items-center justify-between gap-3">
-
+            <div class="px-5 py-3.5 hover-bg transition flex items-center justify-between gap-3">
                 <div class="min-w-0">
-
-                    <p class="font-medium truncate">
-                        {{ trip.origin_city }}
-                        →
-                        {{ trip.destination_city }}
-                    </p>
-
-                    <p class="text-sm text-sec truncate">
-
-                        {{ trip.driver.username }}
-                        ·
-                        {{ trip.departure_datetime|date:"d/m/Y H:i" }}
-
-                    </p>
-
+                    <p class="font-medium text-sm truncate">{{ trip.origin_city }} → {{ trip.destination_city }}</p>
+                    <p class="text-xs text-sec truncate mt-0.5">{{ trip.driver.username }} · {{ trip.departure_datetime|date:"d/m/Y H:i" }}</p>
                 </div>
-
-
-                <span class="text-xs px-2.5 py-1 rounded-full flex-shrink-0
-
-                    {% if trip.status == 'PUBLISHED' %}
-                        bg-green-500/20 text-green-400
-
-                    {% elif trip.status == 'COMPLETED' %}
-                        bg-blue-500/20 text-blue-400
-
-                    {% else %}
-                        bg-gray-500/20 text-gray-400
-                    {% endif %}">
-
+                <span class="text-[10px] font-semibold px-2 py-1 rounded-full shrink-0
+                    {% if trip.status == 'PUBLISHED' %}bg-green-500/15 text-green-400
+                    {% elif trip.status == 'COMPLETED' %}bg-blue-500/15 text-blue-400
+                    {% else %}bg-white/10 text-sec{% endif %}">
                     {{ trip.get_status_display }}
-
                 </span>
-
             </div>
-
-
             {% empty %}
-
-            <p class="px-6 py-8 text-sec text-center">
-                Aucun trajet
-            </p>
-
+            <p class="px-5 py-10 text-sec text-center text-sm">Aucun trajet</p>
             {% endfor %}
-
         </div>
-
     </div>
 
-
-
-    <!-- Réservations récentes -->
-    <div class="card rounded-2xl border border-white/5 overflow-hidden">
-
-        <div class="px-5 sm:px-6 py-4 border-b border-white/5 flex items-center justify-between">
-
-            <h2 class="font-semibold">
-                Réservations récentes
-            </h2>
-
-            <a href="{% url 'admin_dashboard:bookings' %}"
-               class="text-sm accent hover:underline">
-
-                Voir tout
-
-            </a>
-
+    <div class="card-admin rounded-2xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-soft flex items-center justify-between">
+            <h2 class="font-semibold text-sm">Réservations récentes</h2>
+            <a href="{% url 'admin_dashboard:bookings' %}" class="text-xs accent font-semibold hover:underline">Voir tout</a>
         </div>
-
-
-        <div class="divide-y divide-white/5">
-
+        <div class="divide-y" style="border-color: var(--border)">
             {% for booking in recent_bookings %}
-
-            <div class="px-5 sm:px-6 py-4 hover-bg transition flex items-center justify-between gap-3">
-
+            <div class="px-5 py-3.5 hover-bg transition flex items-center justify-between gap-3">
                 <div class="min-w-0">
-
-                    <p class="font-medium truncate">
-                        {{ booking.passenger.username }}
-                    </p>
-
-                    <p class="text-sm text-sec truncate">
-
-                        {{ booking.trip.origin_city }}
-                        →
-                        {{ booking.trip.destination_city }}
-
-                        ·
-
-                        {{ booking.seats }} place(s)
-
-                    </p>
-
+                    <p class="font-medium text-sm truncate">{{ booking.passenger.username }}</p>
+                    <p class="text-xs text-sec truncate mt-0.5">{{ booking.trip.origin_city }} → {{ booking.trip.destination_city }} · {{ booking.seats }} pl.</p>
                 </div>
-
-
-                <span class="text-xs px-2.5 py-1 rounded-full flex-shrink-0
-
-                    {% if booking.status == 'CONFIRMED' %}
-                        bg-green-500/20 text-green-400
-
-                    {% elif booking.status == 'CANCELLED' %}
-                        bg-red-500/20 text-red-400
-
-                    {% else %}
-                        bg-yellow-500/20 text-yellow-400
-                    {% endif %}">
-
+                <span class="text-[10px] font-semibold px-2 py-1 rounded-full shrink-0
+                    {% if booking.status == 'CONFIRMED' %}bg-green-500/15 text-green-400
+                    {% elif booking.status == 'CANCELLED' %}bg-red-500/15 text-red-400
+                    {% else %}bg-yellow-500/15 text-yellow-400{% endif %}">
                     {{ booking.get_status_display }}
-
                 </span>
-
             </div>
-
-
             {% empty %}
-
-            <p class="px-6 py-8 text-sec text-center">
-                Aucune réservation
-            </p>
-
+            <p class="px-5 py-10 text-sec text-center text-sm">Aucune réservation</p>
             {% endfor %}
-
         </div>
-
     </div>
-
 </div>
 
-
-
-<!-- ========================= -->
-<!-- AVIS RÉCENTS -->
-<!-- ========================= -->
-
-<div class="card rounded-2xl border border-white/5 overflow-hidden">
-
-    <div class="px-5 sm:px-6 py-4 border-b border-white/5">
-
-        <h2 class="font-semibold">
-            Avis récents
-        </h2>
-
+<!-- Reviews -->
+<div class="card-admin rounded-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b border-soft">
+        <h2 class="font-semibold text-sm">Avis récents</h2>
     </div>
-
-
-    <div class="divide-y divide-white/5">
-
+    <div class="divide-y" style="border-color: var(--border)">
         {% for review in recent_reviews %}
-
-        <div class="px-5 sm:px-6 py-4 hover-bg transition flex items-start justify-between gap-4">
-
+        <div class="px-5 py-3.5 hover-bg transition flex items-start justify-between gap-4">
             <div class="min-w-0">
-
-                <p class="font-medium">
-
-                    {{ review.reviewer.username }}
-
-                    <span class="text-sec font-normal">
-                        →
-                    </span>
-
-                    {{ review.reviewed_user.username }}
-
-                </p>
-
-
-                <p class="text-sm text-sec mt-0.5">
-
-                    {{ review.trip.origin_city }}
-                    →
-                    {{ review.trip.destination_city }}
-
-                </p>
-
-
-                {% if review.comment %}
-
-                <p class="text-sm mt-1 text-sec line-clamp-2">
-
-                    {{ review.comment }}
-
-                </p>
-
-                {% endif %}
-
+                <p class="font-medium text-sm">{{ review.reviewer.username }} <span class="text-sec font-normal">→</span> {{ review.reviewed_user.username }}</p>
+                <p class="text-xs text-sec mt-0.5">{{ review.trip.origin_city }} → {{ review.trip.destination_city }}</p>
+                {% if review.comment %}<p class="text-xs text-sec mt-1 line-clamp-2">{{ review.comment }}</p>{% endif %}
             </div>
-
-
-            <div class="flex items-center gap-1 flex-shrink-0">
-
-               <span class="inline-flex gap-0.5 text-sm">
+            <span class="inline-flex gap-0.5 text-xs shrink-0">
                 {% for filled in review.rating|star_list %}
-                {% if filled %}
-                <span class="text-yellow-400">★</span>
-                {% else %}
-                <span class="text-white/20">★</span>
-                {% endif %}
+                    {% if filled %}<span class="text-yellow-400">★</span>
+                    {% else %}<span class="opacity-20">★</span>{% endif %}
                 {% endfor %}
-                </span>
-
-            </div>
-
+            </span>
         </div>
-
-
         {% empty %}
-
-        <p class="px-6 py-8 text-sec text-center">
-
-            Aucun avis pour le moment
-
-        </p>
-
+        <p class="px-5 py-10 text-sec text-center text-sm">Aucun avis</p>
         {% endfor %}
-
     </div>
-
 </div>
-
 {% endblock %}
 
-
-
-<!-- ========================= -->
-<!-- JAVASCRIPT DU GRAPHIQUE -->
-<!-- ========================= -->
-
 {% block extra_js %}
-
 <script>
-
 document.addEventListener('DOMContentLoaded', function () {
-
     const canvas = document.getElementById('activityChart');
-
-    if (!canvas) {
-        return;
-    }
-
-
-    /*
-     * Vérification de Chart.js
-     */
-    if (typeof Chart === 'undefined') {
-
-        console.error(
-            'Chart.js n\'est pas chargé.'
-        );
-
-        return;
-    }
-
-
-    const ctx = canvas.getContext('2d');
-
-
-    /*
-     * Création du graphique
-     */
-    new Chart(ctx, {
-
+    if (!canvas || typeof Chart === 'undefined') return;
+    new Chart(canvas.getContext('2d'), {
         type: 'bar',
-
         data: {
-
-            labels: [
-                'Utilisateurs',
-                'Trajets',
-                'Réservations',
-                'Avis',
-                'Revenus (k)'
-            ],
-
-
+            labels: ['Utilisateurs', 'Trajets', 'Réservations', 'Avis', 'Revenus (k)'],
             datasets: [{
-
                 label: 'Totaux',
-
                 data: [
-
                     {{ total_users }},
-
                     {{ total_trips }},
-
                     {{ total_bookings }},
-
                     {{ total_reviews }},
-
-                    Math.round(
-                        {{ total_revenue|default:0 }} / 1000
-                    )
-
+                    Math.round({{ total_revenue|default:0 }} / 1000)
                 ],
-
-
                 backgroundColor: [
-
-                    'rgba(29, 185, 84, 0.8)',
-
-                    'rgba(59, 130, 246, 0.8)',
-
-                    'rgba(168, 85, 247, 0.8)',
-
-                    'rgba(234, 179, 8, 0.8)',
-
-                    'rgba(239, 68, 68, 0.8)'
-
+                    'rgba(29, 185, 84, 0.85)',
+                    'rgba(59, 130, 246, 0.85)',
+                    'rgba(168, 85, 247, 0.85)',
+                    'rgba(234, 179, 8, 0.85)',
+                    'rgba(239, 68, 68, 0.85)'
                 ],
-
-
-                borderRadius: 6
-
+                borderRadius: 8
             }]
-
         },
-
-
         options: {
-
             responsive: true,
-
             maintainAspectRatio: false,
-
-
-            plugins: {
-
-                legend: {
-                    display: false
-                }
-
-            },
-
-
+            plugins: { legend: { display: false } },
             scales: {
-
                 y: {
-
                     beginAtZero: true,
-
-                    grid: {
-                        color: 'rgba(255,255,255,0.06)'
-                    },
-
-                    ticks: {
-                        color: '#b3b3b3'
-                    }
-
+                    grid: { color: 'rgba(128,128,128,0.12)' },
+                    ticks: { color: '#a3a3a3' }
                 },
-
-
                 x: {
-
-                    grid: {
-                        display: false
-                    },
-
-                    ticks: {
-                        color: '#b3b3b3'
-                    }
-
+                    grid: { display: false },
+                    ticks: { color: '#a3a3a3' }
                 }
-
             }
-
         }
-
     });
-
 });
-
 </script>
-
 {% endblock %}
