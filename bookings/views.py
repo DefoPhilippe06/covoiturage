@@ -9,6 +9,10 @@ from trips.models import Trip
 from messaging.models import Conversation
 from notifications.utils import send_notification
 from core.permissions import IsOwnerOrReadOnly
+from trips.tasks import (
+    send_booking_notification,
+    send_booking_cancelled_notification,
+)
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -92,6 +96,19 @@ class BookingViewSet(viewsets.ModelViewSet):
         conversation, _ = Conversation.objects.get_or_create(trip=trip)
         conversation.participants.add(trip.driver, user)
 
+                # Email async au conducteur
+        driver_email = getattr(trip.driver, "email", "") or ""
+        if driver_email:
+            commission = float(total) * 0.05  # 5 % exemple
+            send_booking_notification.delay(
+                driver_email=driver_email,
+                passenger_name=user.get_full_name() or user.username,
+                trip_id=trip.id,
+                seats_left=trip.seats_available,
+                amount=float(total),
+                commission=commission,
+            )
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -148,6 +165,19 @@ class BookingViewSet(viewsets.ModelViewSet):
                 f"{trip.destination_city} a été annulée."
             ),
             type="BOOKING",
+        )
+        driver_email = getattr(trip.driver, "email", "") or ""
+        passenger_email = getattr(booking.passenger, "email", "") or ""
+        send_booking_cancelled_notification.delay(
+            driver_email=driver_email,
+            passenger_email=passenger_email,
+            passenger_name=(
+                booking.passenger.get_full_name() or booking.passenger.username
+            ),
+            trip_id=trip.id,
+            origin_city=trip.origin_city,
+            destination_city=trip.destination_city,
+            seats=booking.seats,
         )
 
         return Response({
