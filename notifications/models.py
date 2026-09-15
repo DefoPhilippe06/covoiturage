@@ -8,6 +8,7 @@ class Notification(models.Model):
         PAYMENT = "PAYMENT", "Paiement"
         REVIEW = "REVIEW", "Avis"
         SYSTEM = "SYSTEM", "Système"
+        MESSAGE = "MESSAGE", "Message"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

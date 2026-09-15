@@ -8,8 +8,7 @@
         <p class="text-sm text-muted mt-1">Conversations liées à vos trajets</p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-12rem)] min-h-[420px]">
-
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-12rem)] min-h-[480px]">
         <!-- Liste -->
         <div id="conv-panel" class="card rounded-3xl overflow-hidden flex flex-col border border-white/5 lg:col-span-2">
             <div class="px-5 py-4 border-b border-soft">
@@ -29,14 +28,19 @@
                 <p class="text-sm text-muted truncate">Sélectionnez une conversation</p>
             </div>
             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3"></div>
-            <div id="chat-input-area" class="hidden p-4 border-t border-soft flex gap-2">
-                <input id="msg-input" type="text" placeholder="Écrire un message..."
-                       class="flex-1 px-4 py-3 rounded-2xl elevated border border-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                       onkeydown="if(event.key==='Enter') sendMessage()">
-                <button onclick="sendMessage()"
-                        class="px-5 py-3 rounded-2xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition shrink-0">
-                    Envoyer
-                </button>
+            <div id="chat-input-area" class="hidden p-3 sm:p-4 border-t border-soft">
+                <div id="ckeditor-wrap" class="mb-3">
+                    <textarea id="msg-input"></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button id="cancel-edit-btn" onclick="cancelEdit()" class="hidden px-4 py-2 rounded-xl text-sm text-muted hover:bg-white/5">
+                        Annuler
+                    </button>
+                    <button onclick="sendMessage()"
+                            class="px-5 py-2.5 rounded-xl bg-brand-500 text-black font-bold text-sm hover:bg-brand-400 transition">
+                        <span id="send-btn-label">Envoyer</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -44,9 +48,34 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<style>
+    /* CKEditor dark-friendly */
+    .ck.ck-editor__main > .ck-editor__editable {
+        min-height: 90px;
+        max-height: 180px;
+        background: var(--bg-elevated) !important;
+        color: var(--text) !important;
+        border-color: var(--border) !important;
+    }
+    .ck.ck-toolbar {
+        background: var(--bg-card) !important;
+        border-color: var(--border) !important;
+    }
+    .ck.ck-button, .ck.ck-dropdown__button {
+        color: var(--text) !important;
+    }
+    .ck-content a { color: #1DB954; }
+    .msg-html p { margin: 0 0 0.35em; }
+    .msg-html p:last-child { margin: 0; }
+    .msg-html ul, .msg-html ol { margin: 0.25em 0 0.25em 1.2em; }
+    .msg-html strong { font-weight: 700; }
+</style>
 <script>
 let currentConvId = null;
-const token = () => localStorage.getItem('access_token');
+let editingMessageId = null;
+let editorInstance = null;
+const me = "{{ user.username }}";
 
 function showList() {
     document.getElementById('conv-panel').classList.remove('hidden');
@@ -61,8 +90,49 @@ function showChat() {
     }
 }
 
+function stripHtml(html) {
+    const d = document.createElement('div');
+    d.innerHTML = html || '';
+    return (d.textContent || d.innerText || '').trim();
+}
+
+async function initEditor() {
+    if (editorInstance) return editorInstance;
+        editorInstance = await ClassicEditor.create(document.querySelector('#msg-input'), {
+        toolbar: [
+            'heading', '|',
+            'bold', 'italic', 'underline', 'strikethrough', '|',
+            'link', 'bulletedList', 'numberedList', 'blockQuote', '|',
+            'undo', 'redo'
+        ],
+        placeholder: 'Écrire un message… (accents, @, # autorisés)',
+        language: 'fr'
+    });
+    return editorInstance;
+}
+
+function getEditorContent() {
+    if (!editorInstance) return '';
+    return editorInstance.getData().trim();
+}
+function setEditorContent(html) {
+    if (editorInstance) editorInstance.setData(html || '');
+}
+function clearEditor() {
+    setEditorContent('');
+    editingMessageId = null;
+    document.getElementById('send-btn-label').textContent = 'Envoyer';
+    document.getElementById('cancel-edit-btn').classList.add('hidden');
+}
+function cancelEdit() {
+    clearEditor();
+}
+
 async function loadConversations() {
-    if (!token()) { window.location.href = '/login/'; return; }
+    if (!localStorage.getItem('access_token')) {
+        window.location.href = '/login/';
+        return;
+    }
     try {
         const res = await apiFetch('/api/conversations/');
         const data = await res.json();
@@ -81,13 +151,13 @@ async function loadConversations() {
         el.innerHTML = convs.map(c => {
             const names = (c.participants_usernames || []).join(', ');
             const last = c.messages && c.messages.length
-                ? c.messages[c.messages.length - 1].content.slice(0, 48)
+                ? stripHtml(c.messages[c.messages.length - 1].content).slice(0, 48)
                 : 'Aucun message';
             return `
                 <button onclick="openConversation(${c.id})"
                         class="w-full text-left px-5 py-4 hover:bg-white/[0.04] border-b border-soft transition ${currentConvId === c.id ? 'bg-white/[0.04]' : ''}">
                     <p class="font-semibold text-sm truncate">${names}</p>
-                    <p class="text-xs text-muted truncate mt-1">${last}</p>
+                    <p class="text-xs text-muted truncate mt-1">${last || '...'}</p>
                 </button>`;
         }).join('');
     } catch {
@@ -96,12 +166,35 @@ async function loadConversations() {
     }
 }
 
+function renderMessage(m) {
+    const mine = m.sender_username === me || m.is_mine;
+    const actions = mine ? `
+        <div class="flex gap-2 mt-1.5 ${mine ? 'justify-end' : ''}">
+            <button onclick='startEdit(${m.id}, ${JSON.stringify(m.content)})'
+                    class="text-[10px] opacity-70 hover:opacity-100 underline">Modifier</button>
+            <button onclick="deleteMessage(${m.id})"
+                    class="text-[10px] opacity-70 hover:opacity-100 underline text-red-400">Supprimer</button>
+        </div>` : '';
+
+    return `
+        <div class="flex ${mine ? 'justify-end' : 'justify-start'}" id="msg-row-${m.id}">
+            <div class="max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${mine ? 'bg-brand-500 text-black rounded-br-md' : 'elevated rounded-bl-md'}">
+                ${!mine ? `<p class="text-[11px] font-semibold mb-0.5 opacity-70">${m.sender_username}</p>` : ''}
+                <div class="msg-html">${m.content}</div>
+                ${actions}
+            </div>
+        </div>`;
+}
+
 async function openConversation(id) {
     currentConvId = id;
+    clearEditor();
     showChat();
     document.getElementById('chat-input-area').classList.remove('hidden');
     document.getElementById('chat-panel').classList.add('flex');
     document.getElementById('chat-panel').classList.remove('hidden');
+
+    await initEditor();
 
     const res = await apiFetch('/api/conversations/' + id + '/');
     const conv = await res.json();
@@ -115,38 +208,66 @@ async function openConversation(id) {
 
     const msgs = conv.messages || [];
     const box = document.getElementById('chat-messages');
-    box.innerHTML = msgs.length ? msgs.map(m => {
-        const mine = m.sender_username === '{{ user.username }}';
-        return `
-            <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
-                <div class="max-w-[80%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${mine ? 'bg-brand-500 text-black rounded-br-md' : 'elevated rounded-bl-md'}">
-                    ${!mine ? `<p class="text-[11px] font-semibold mb-0.5 opacity-70">${m.sender_username}</p>` : ''}
-                    <p>${m.content}</p>
-                </div>
-            </div>`;
-    }).join('') : '<p class="text-muted text-sm text-center py-12">Aucun message. Écrivez le premier !</p>';
-
+    box.innerHTML = msgs.length
+        ? msgs.map(renderMessage).join('')
+        : '<p class="text-muted text-sm text-center py-12">Aucun message. Écrivez le premier !</p>';
     box.scrollTop = box.scrollHeight;
     loadConversations();
 }
 
+function startEdit(id, content) {
+    editingMessageId = id;
+    setEditorContent(content);
+    document.getElementById('send-btn-label').textContent = 'Mettre à jour';
+    document.getElementById('cancel-edit-btn').classList.remove('hidden');
+    editorInstance?.editing.view.focus();
+}
+
 async function sendMessage() {
-    const input = document.getElementById('msg-input');
-    const content = input.value.trim();
-    if (!content || !currentConvId) return;
+    const content = getEditorContent();
+    if (!content || content === '<p>&nbsp;</p>' || !currentConvId) return;
+
+    if (editingMessageId) {
+        const res = await apiFetch('/api/messages/' + editingMessageId + '/', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        });
+        if (res.ok) {
+            clearEditor();
+            openConversation(currentConvId);
+        } else {
+            const err = await res.json().catch(() => ({}));
+            alert(err.detail || 'Erreur modification');
+        }
+        return;
+    }
+
     const res = await apiFetch(`/api/conversations/${currentConvId}/send_message/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
     });
     if (res.ok) {
-        input.value = '';
+        clearEditor();
         openConversation(currentConvId);
     } else {
         alert('Erreur envoi message');
     }
 }
 
-document.addEventListener('DOMContentLoaded', loadConversations);
+async function deleteMessage(id) {
+    if (!confirm('Supprimer ce message ?')) return;
+    const res = await apiFetch('/api/messages/' + id + '/', { method: 'DELETE' });
+    if (res.ok || res.status === 204) {
+        openConversation(currentConvId);
+    } else {
+        alert('Erreur suppression');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadConversations();
+});
 </script>
 {% endblock %}

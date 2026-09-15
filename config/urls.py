@@ -10,7 +10,7 @@ from trips.views import TripViewSet
 from bookings.views import BookingViewSet
 from reviews.views import ReviewViewSet
 from notifications.views import NotificationViewSet
-from messaging.views import ConversationViewSet
+from messaging.views import ConversationViewSet, MessageViewSet
 from payments.views import PaymentViewSet
 
 router = DefaultRouter()
@@ -19,6 +19,7 @@ router.register("trips", TripViewSet, basename="trip")
 router.register("bookings", BookingViewSet, basename="booking")
 router.register("reviews", ReviewViewSet, basename="review")
 router.register("notifications", NotificationViewSet, basename="notification")
+router.register("messages", MessageViewSet, basename="message")
 router.register("conversations", ConversationViewSet, basename="conversation")
 router.register("payments", PaymentViewSet, basename="payment")
 
