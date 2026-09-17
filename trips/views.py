@@ -22,13 +22,19 @@ class TripViewSet(viewsets.ModelViewSet):
         if self.action == "my_trips":
             return Trip.objects.filter(driver=self.request.user)
 
-        # Liste publique : uniquement publiés
-        qs = Trip.objects.filter(status=Trip.Status.PUBLISHED)
+        # Liste publique : publiés + futurs + places
+        from django.utils import timezone
+        qs = Trip.objects.filter(
+            status=Trip.Status.PUBLISHED,
+            departure_datetime__gte=timezone.now(),
+            seats_available__gt=0,
+        )
         origin = self.request.query_params.get("origin")
         destination = self.request.query_params.get("destination")
         date = self.request.query_params.get("date")
         min_seats = self.request.query_params.get("min_seats")
         max_price = self.request.query_params.get("max_price")
+        near_city = self.request.query_params.get("near_city")  # priorisation
 
         if origin:
             qs = qs.filter(origin_city__icontains=origin)
@@ -40,6 +46,12 @@ class TripViewSet(viewsets.ModelViewSet):
             qs = qs.filter(seats_available__gte=min_seats)
         if max_price:
             qs = qs.filter(price_per_seat__lte=max_price)
+
+        if near_city and not origin:
+            qs = qs.order_by("departure_datetime")
+        else:
+            qs = qs.order_by("departure_datetime")
+
         return qs
 
     def perform_create(self, serializer):

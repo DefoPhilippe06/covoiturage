@@ -410,17 +410,26 @@ async function openNotifications() {
         document.getElementById('notif-list').innerHTML = '<p class="text-red-400 text-sm text-center py-6">Erreur</p>';
     }
 }
-document.addEventListener('DOMContentLoaded', async () => {
+async function refreshNotifBadge() {
     const token = localStorage.getItem('access_token');
     if (!token) return;
     try {
         const res = await apiFetch('/api/notifications/');
+        if (!res.ok) return;
         const data = await res.json();
         const notifs = data.results || data;
-        if (notifs.filter(n => !n.is_read).length > 0) {
-            document.getElementById('notif-badge')?.classList.remove('hidden');
-        }
+        const unread = notifs.filter(n => !n.is_read).length;
+        const badge = document.getElementById('notif-badge');
+        if (!badge) return;
+        if (unread > 0) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
     } catch {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    refreshNotifBadge();
+    // Polling toutes les 20 secondes
+    setInterval(refreshNotifBadge, 20000);
 });
 
 /* Véhicule */
