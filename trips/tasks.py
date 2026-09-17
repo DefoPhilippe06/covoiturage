@@ -81,3 +81,16 @@ def send_booking_cancelled_notification(
         results.append(f"passenger:{passenger_email}")
 
     return ", ".join(results) if results else "Aucun email"
+
+from celery import shared_task
+from django.utils import timezone
+from .models import Trip
+
+
+@shared_task
+def expire_past_trips():
+    n = Trip.objects.filter(
+        status=Trip.Status.PUBLISHED,
+        departure_datetime__lt=timezone.now(),
+    ).update(status=Trip.Status.COMPLETED)  # ou CANCELLED selon ta règle
+    return f"{n} trajets expirés"

@@ -11,6 +11,7 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)  # ← nouveau
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    home_city = models.CharField(max_length=100, blank=True, default="")
 
     def __str__(self):
         return self.username

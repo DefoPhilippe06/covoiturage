@@ -34,8 +34,9 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                     <label class="block text-[11px] uppercase tracking-wider text-muted mb-2 font-semibold">Départ</label>
-                    <input type="text" name="origin" placeholder="Ex. Yaoundé"
-                           class="w-full px-4 py-3.5 rounded-2xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/40 transition text-sm">
+                        <input type="text" name="origin" placeholder="Ex. Yaoundé"
+                            value="{{ user_city }}"
+                            class="w-full px-4 py-3.5 rounded-2xl elevated border border-soft focus:outline-none focus:ring-2 focus:ring-brand-500/40 transition text-sm">
                 </div>
                 <div>
                     <label class="block text-[11px] uppercase tracking-wider text-muted mb-2 font-semibold">Arrivée</label>
@@ -63,7 +64,13 @@
     <div class="flex items-end justify-between gap-4 mb-8">
         <div>
             <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">Trajets disponibles</h2>
-            <p class="text-sm text-muted mt-1">Les prochains départs publiés</p>
+                <p class="text-sm text-muted mt-1">
+                    {% if user_city %}
+                        Priorité aux départs depuis <span class="text-brand-500 font-semibold">{{ user_city }}</span>
+                    {% else %}
+                        Les prochains départs · activez la localisation pour un tri intelligent
+                    {% endif %}
+                </p>
         </div>
         <a href="{% url 'frontend:search' %}"
            class="text-sm font-semibold text-brand-500 hover:text-brand-400 transition whitespace-nowrap">
@@ -152,4 +159,60 @@
         {% endfor %}
     </div>
 </section>
+{% block extra_js %}
+<script>
+(function () {
+    function setCityCookie(city) {
+        if (!city) return;
+        // Ne pas double-encoder : le navigateur gère déjà
+        const clean = city.trim();
+        document.cookie = 'user_city=' + encodeURIComponent(clean)
+            + '; path=/; max-age=' + (60 * 60 * 24 * 30) + '; SameSite=Lax';
+    }
+
+    function getCookie(name) {
+        const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+
+    // Si une ville est déjà connue, on ne redemande pas
+    if (getCookie('user_city')) return;
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+    try {
+        const { latitude, longitude } = pos.coords;
+        const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat='
+            + latitude + '&lon=' + longitude + '&zoom=10&addressdetails=1';
+        const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+        const data = await res.json();
+        const addr = data.address || {};
+        const city = addr.city || addr.town || addr.village || addr.state || '';
+        if (city) {
+            setCityCookie(city);
+
+            // Sauver sur le profil si connecté
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                apiFetch('/api/auth/profile/', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ home_city: city })
+                }).catch(() => {});
+            }
+
+            if (!sessionStorage.getItem('city_reload_done')) {
+                sessionStorage.setItem('city_reload_done', '1');
+                window.location.reload();
+            }
+        }
+    } catch (e) {
+        console.warn('Géoloc:', e);
+    }
+    }, (err) => {
+        console.warn('Géoloc refusée:', err.message);
+    }, { enableHighAccuracy: false, timeout: 10000 });
+})();
+</script>
+{% endblock %}
 {% endblock %}
