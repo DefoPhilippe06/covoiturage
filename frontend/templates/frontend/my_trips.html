@@ -16,26 +16,50 @@
 
     <div class="space-y-3 sm:space-y-4">
         {% for trip in trips %}
-        <a href="{% url 'frontend:trip_detail' trip.pk %}"
-           class="card rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-white/5 hover:border-brand-500/35 transition-all group animate-in">
-            <div class="min-w-0">
-                <p class="font-bold text-lg tracking-tight group-hover:text-brand-500 transition truncate">
-                    {{ trip.origin_city }} <span class="text-muted font-normal">→</span> {{ trip.destination_city }}
-                </p>
-                <p class="text-sm text-muted mt-1.5">
-                    {{ trip.departure_datetime|date:"D d M Y · H:i" }}
-                    · {{ trip.seats_available }}/{{ trip.seats_total }} places
-                    · {{ trip.price_per_seat|floatformat:0 }} XAF
-                </p>
+        <div class="card rounded-3xl p-5 sm:p-6 border border-white/5 hover:border-brand-500/35 transition-all animate-in">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <a href="{% url 'frontend:trip_detail' trip.pk %}" class="min-w-0 group flex-1">
+                    <p class="font-bold text-lg tracking-tight group-hover:text-brand-500 transition truncate">
+                        {{ trip.origin_city }} <span class="text-muted font-normal">→</span> {{ trip.destination_city }}
+                    </p>
+                    <p class="text-sm text-muted mt-1.5">
+                        {{ trip.departure_datetime|date:"D d M Y · H:i" }}
+                        · {{ trip.seats_available }}/{{ trip.seats_total }} places
+                        · {{ trip.price_per_seat|floatformat:0 }} XAF
+                    </p>
+                </a>
+
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <span class="text-xs font-semibold px-3 py-1.5 rounded-full w-fit
+                        {% if trip.status == 'PUBLISHED' %}bg-green-500/15 text-green-400
+                        {% elif trip.status == 'STARTED' %}bg-brand-500/15 text-brand-500
+                        {% elif trip.status == 'COMPLETED' %}bg-blue-500/15 text-blue-400
+                        {% elif trip.status == 'CANCELLED' %}bg-red-500/15 text-red-400
+                        {% else %}bg-white/10 text-muted{% endif %}">
+                        {{ trip.get_status_display }}
+                    </span>
+
+                    {% if trip.status == 'PUBLISHED' %}
+                    <button type="button"
+                            onclick="startTrip({{ trip.id }})"
+                            class="px-4 py-2 rounded-full bg-brand-500 text-black text-xs font-bold hover:bg-brand-400 transition">
+                        Démarrer
+                    </button>
+                    {% elif trip.status == 'STARTED' %}
+                    <button type="button"
+                            onclick="resumeTracking({{ trip.id }})"
+                            class="px-4 py-2 rounded-full bg-brand-500 text-black text-xs font-bold hover:bg-brand-400 transition">
+                        Reprendre le suivi
+                    </button>
+                    <button type="button"
+                            onclick="completeTrip({{ trip.id }})"
+                            class="px-4 py-2 rounded-full border border-white/15 text-xs font-semibold hover:bg-white/5 transition">
+                        Terminer
+                    </button>
+                    {% endif %}
+                </div>
             </div>
-            <span class="text-xs font-semibold px-3 py-1.5 rounded-full shrink-0 w-fit
-                {% if trip.status == 'PUBLISHED' %}bg-green-500/15 text-green-400
-                {% elif trip.status == 'COMPLETED' %}bg-blue-500/15 text-blue-400
-                {% elif trip.status == 'CANCELLED' %}bg-red-500/15 text-red-400
-                {% else %}bg-white/10 text-muted{% endif %}">
-                {{ trip.get_status_display }}
-            </span>
-        </a>
+        </div>
         {% empty %}
         <div class="text-center py-24 animate-in">
             <div class="w-20 h-20 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-5">
@@ -54,4 +78,91 @@
         {% endfor %}
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let trackTimer = null;
+
+function startTracking(tripId) {
+    if (trackTimer) clearInterval(trackTimer);
+
+    const send = () => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                await apiFetch('/api/trips/' + tripId + '/location/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                        speed: pos.coords.speed
+                    })
+                });
+            } catch (e) {
+                console.warn('Envoi position:', e);
+            }
+        }, (err) => console.warn('Géoloc:', err.message), {
+            enableHighAccuracy: true,
+            timeout: 10000
+        });
+    };
+
+    send();
+    trackTimer = setInterval(send, 8000);
+    // Garder l'id pour reprendre après rechargement éventuel
+    sessionStorage.setItem('tracking_trip_id', String(tripId));
+}
+
+function stopTracking() {
+    if (trackTimer) clearInterval(trackTimer);
+    trackTimer = null;
+    sessionStorage.removeItem('tracking_trip_id');
+}
+
+async function startTrip(tripId) {
+    if (!localStorage.getItem('access_token')) {
+        window.location.href = '/login/';
+        return;
+    }
+    try {
+        const res = await apiFetch('/api/trips/' + tripId + '/start/', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            alert(data.detail || 'Impossible de démarrer');
+            return;
+        }
+        startTracking(tripId);
+        window.location.href = '/trip/' + tripId + '/';
+    } catch (e) {
+        alert('Erreur réseau : ' + e.message);
+    }
+}
+
+function resumeTracking(tripId) {
+    if (!localStorage.getItem('access_token')) {
+        window.location.href = '/login/';
+        return;
+    }
+    startTracking(tripId);
+    window.location.href = '/trip/' + tripId + '/';
+}
+
+async function completeTrip(tripId) {
+    if (!confirm('Terminer ce trajet ?')) return;
+    try {
+        const res = await apiFetch('/api/trips/' + tripId + '/complete/', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            alert(data.detail || 'Impossible de terminer');
+            return;
+        }
+        stopTracking();
+        window.location.reload();
+    } catch (e) {
+        alert('Erreur réseau : ' + e.message);
+    }
+}
+</script>
 {% endblock %}

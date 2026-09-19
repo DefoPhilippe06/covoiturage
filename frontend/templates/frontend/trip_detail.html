@@ -258,4 +258,72 @@ async function submitPayment(bookingId, totalPrice) {
 }
 </script>
 {% endif %}
+{% if trip.status == "STARTED" %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<section class="w-full px-6 sm:px-10 lg:px-16 pb-12">
+    <div class="card rounded-3xl border border-white/5 overflow-hidden">
+        <div class="px-5 py-4 border-b border-soft flex items-center justify-between">
+            <div>
+                <p class="text-[11px] uppercase tracking-wider text-muted font-semibold">Suivi en direct</p>
+                <p class="text-sm font-medium mt-0.5">Position du conducteur</p>
+            </div>
+            <span id="live-status" class="text-xs text-muted">Chargement…</span>
+        </div>
+        <div id="live-map" class="w-full h-72 sm:h-96 bg-black/20"></div>
+    </div>
+</section>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    const tripId = {{ trip.id }};
+    const map = L.map('live-map').setView([4.05, 9.70], 12);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles © Esri'
+    }).addTo(map);
+
+    let driverMarker = null;
+    const origin = {% if trip.origin_lat and trip.origin_lng %}[{{ trip.origin_lat }}, {{ trip.origin_lng }}]{% else %}null{% endif %};
+    const dest = {% if trip.destination_lat and trip.destination_lng %}[{{ trip.destination_lat }}, {{ trip.destination_lng }}]{% else %}null{% endif %};
+
+    if (origin) L.marker(origin).addTo(map).bindPopup('Départ : {{ trip.origin_city|escapejs }}');
+    if (dest) L.marker(dest).addTo(map).bindPopup('Arrivée : {{ trip.destination_city|escapejs }}');
+    if (origin && dest) {
+        L.polyline([origin, dest], { color: '#1DB954', weight: 3, dashArray: '6' }).addTo(map);
+        map.fitBounds(L.latLngBounds([origin, dest]).pad(0.25));
+    }
+
+    async function refreshDriverPosition() {
+        try {
+            const res = await apiFetch('/api/trips/' + tripId + '/location/latest/');
+            const data = await res.json();
+            const statusEl = document.getElementById('live-status');
+            if (!res.ok || data.lat == null) {
+                if (statusEl) statusEl.textContent = data.detail || 'En attente de position…';
+                return;
+            }
+            const latlng = [parseFloat(data.lat), parseFloat(data.lng)];
+            if (!driverMarker) {
+                driverMarker = L.circleMarker(latlng, {
+                    radius: 10,
+                    color: '#1DB954',
+                    fillColor: '#1DB954',
+                    fillOpacity: 0.9
+                }).addTo(map).bindPopup('Conducteur');
+                map.setView(latlng, 14);
+            } else {
+                driverMarker.setLatLng(latlng);
+            }
+            if (statusEl) statusEl.textContent = 'Mis à jour · ' + new Date().toLocaleTimeString('fr-FR');
+        } catch (e) {
+            const statusEl = document.getElementById('live-status');
+            if (statusEl) statusEl.textContent = 'Erreur de suivi';
+        }
+    }
+
+    refreshDriverPosition();
+    setInterval(refreshDriverPosition, 5000);
+})();
+</script>
+{% endif %}
 {% endblock %}

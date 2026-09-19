@@ -1,0 +1,86 @@
+{% extends "admin_dashboard/base.html" %}
+
+{% block title %}Suivi — {{ trip.origin_city }} → {{ trip.destination_city }}{% endblock %}
+{% block page_title %}Suivi live{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+        <a href="{% url 'admin_dashboard:trips' %}" class="text-xs text-sec hover:accent transition">← Retour trajets</a>
+        <h2 class="text-xl font-bold mt-1">
+            {{ trip.origin_city }} → {{ trip.destination_city }}
+        </h2>
+        <p class="text-sm text-sec mt-1">
+            Conducteur : {{ trip.driver.username }}
+            · Statut : <span class="font-semibold">{{ trip.get_status_display }}</span>
+        </p>
+    </div>
+    <span id="live-status" class="text-xs text-sec">Chargement…</span>
+</div>
+
+<div class="card-admin rounded-2xl overflow-hidden">
+    <div id="admin-live-map" class="w-full h-[420px] sm:h-[560px]"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    const tripId = {{ trip.id }};
+    const map = L.map('admin-live-map').setView([4.05, 9.70], 12);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles © Esri'
+    }).addTo(map);
+
+    let driverMarker = null;
+    const origin = {% if trip.origin_lat and trip.origin_lng %}[{{ trip.origin_lat }}, {{ trip.origin_lng }}]{% else %}null{% endif %};
+    const dest = {% if trip.destination_lat and trip.destination_lng %}[{{ trip.destination_lat }}, {{ trip.destination_lng }}]{% else %}null{% endif %};
+
+    if (origin) L.marker(origin).addTo(map).bindPopup('Départ : {{ trip.origin_city|escapejs }}');
+    if (dest) L.marker(dest).addTo(map).bindPopup('Arrivée : {{ trip.destination_city|escapejs }}');
+    if (origin && dest) {
+        L.polyline([origin, dest], { color: '#1DB954', weight: 3, dashArray: '6' }).addTo(map);
+        map.fitBounds(L.latLngBounds([origin, dest]).pad(0.25));
+    }
+
+    async function refresh() {
+        try {
+            const res = await fetch('/dashboard/trips/' + tripId + '/location/', {
+                credentials: 'same-origin'
+            });
+            const data = await res.json();
+            const statusEl = document.getElementById('live-status');
+            if (!res.ok || data.lat == null) {
+                if (statusEl) statusEl.textContent = data.detail || 'En attente de position…';
+                return;
+            }
+            const latlng = [parseFloat(data.lat), parseFloat(data.lng)];
+            if (!driverMarker) {
+                driverMarker = L.circleMarker(latlng, {
+                    radius: 10,
+                    color: '#1DB954',
+                    fillColor: '#1DB954',
+                    fillOpacity: 0.9
+                }).addTo(map).bindPopup('Conducteur');
+                map.setView(latlng, 14);
+            } else {
+                driverMarker.setLatLng(latlng);
+            }
+            if (statusEl) statusEl.textContent = 'Mis à jour · ' + new Date().toLocaleTimeString('fr-FR');
+        } catch (e) {
+            const statusEl = document.getElementById('live-status');
+            if (statusEl) statusEl.textContent = 'Erreur de suivi';
+        }
+    }
+
+    refresh();
+    setInterval(refresh, 5000);
+})();
+</script>
+{% endblock %}

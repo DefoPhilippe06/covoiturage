@@ -122,3 +122,46 @@ def cancel_trip(request, trip_id):
         trip.save(update_fields=["status"])
         messages.success(request, f"Trajet {trip.origin_city} → {trip.destination_city} annulé.")
     return redirect("admin_dashboard:trips")
+
+from django.http import JsonResponse
+
+
+@login_required
+@user_passes_test(is_admin)
+def trip_track(request, trip_id):
+    trip = get_object_or_404(
+        Trip.objects.select_related("driver", "vehicle"),
+        pk=trip_id,
+    )
+    return render(request, "admin_dashboard/trip_track.html", {"trip": trip})
+
+
+@login_required
+@user_passes_test(is_admin)
+def trip_location_json(request, trip_id):
+    """Dernière position — accessible via session admin (pas de JWT)."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    loc = trip.locations.order_by("-recorded_at").first() if hasattr(trip, "locations") else None
+    payload = {
+        "trip_id": trip.id,
+        "status": trip.status,
+        "origin": {
+            "lat": float(trip.origin_lat) if trip.origin_lat is not None else None,
+            "lng": float(trip.origin_lng) if trip.origin_lng is not None else None,
+            "city": trip.origin_city,
+        },
+        "destination": {
+            "lat": float(trip.destination_lat) if trip.destination_lat is not None else None,
+            "lng": float(trip.destination_lng) if trip.destination_lng is not None else None,
+            "city": trip.destination_city,
+        },
+    }
+    if loc:
+        payload.update({
+            "lat": float(loc.lat),
+            "lng": float(loc.lng),
+            "recorded_at": loc.recorded_at.isoformat(),
+        })
+    else:
+        payload.update({"lat": None, "lng": None, "detail": "Aucune position encore."})
+    return JsonResponse(payload)

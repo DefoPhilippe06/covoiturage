@@ -9,3 +9,11 @@ class TripSerializer(serializers.ModelSerializer):
         model = Trip
         fields = "__all__"
         read_only_fields = ("driver", "seats_available", "status")
+
+from .models import TripLocation
+
+class TripLocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TripLocation
+        fields = ("id", "trip", "lat", "lng", "speed", "recorded_at")
+        read_only_fields = ("id", "recorded_at")

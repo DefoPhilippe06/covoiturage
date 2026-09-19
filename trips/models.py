@@ -54,3 +54,23 @@ class Trip(models.Model):
         if not self.pk:  # nouveau trajet
             self.seats_available = self.seats_total
         super().save(*args, **kwargs)
+
+class TripLocation(models.Model):
+    trip = models.ForeignKey(
+        Trip,
+        on_delete=models.CASCADE,
+        related_name="locations",
+    )
+    lat = models.DecimalField(max_digits=9, decimal_places=6)
+    lng = models.DecimalField(max_digits=9, decimal_places=6)
+    speed = models.FloatField(null=True, blank=True)  # optionnel
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-recorded_at"]
+        indexes = [
+            models.Index(fields=["trip", "-recorded_at"]),
+        ]
+
+    def __str__(self):
+        return f"Trip {self.trip_id} @ {self.lat},{self.lng}"

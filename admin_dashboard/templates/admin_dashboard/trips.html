@@ -11,10 +11,26 @@
     </div>
 
     <div class="px-5 sm:px-6 py-3 border-b border-soft flex flex-wrap gap-2">
-        <a href="?status=" class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if not current_status %}bg-accent/15 accent{% else %}hover-bg text-sec{% endif %}">Tous</a>
-        <a href="?status=PUBLISHED" class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if current_status == 'PUBLISHED' %}bg-green-500/15 text-green-400{% else %}hover-bg text-sec{% endif %}">Publiés</a>
-        <a href="?status=COMPLETED" class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if current_status == 'COMPLETED' %}bg-blue-500/15 text-blue-400{% else %}hover-bg text-sec{% endif %}">Terminés</a>
-        <a href="?status=CANCELLED" class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if current_status == 'CANCELLED' %}bg-red-500/15 text-red-400{% else %}hover-bg text-sec{% endif %}">Annulés</a>
+        <a href="?status="
+           class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if not current_status %}bg-accent/15 accent{% else %}hover-bg text-sec{% endif %}">
+            Tous
+        </a>
+        <a href="?status=PUBLISHED"
+           class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if current_status == 'PUBLISHED' %}bg-green-500/15 text-green-400{% else %}hover-bg text-sec{% endif %}">
+            Publiés
+        </a>
+        <a href="?status=STARTED"
+           class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if current_status == 'STARTED' %}bg-yellow-500/15 text-yellow-400{% else %}hover-bg text-sec{% endif %}">
+            Démarrés
+        </a>
+        <a href="?status=COMPLETED"
+           class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if current_status == 'COMPLETED' %}bg-blue-500/15 text-blue-400{% else %}hover-bg text-sec{% endif %}">
+            Terminés
+        </a>
+        <a href="?status=CANCELLED"
+           class="text-[11px] font-semibold px-3 py-1.5 rounded-full transition {% if current_status == 'CANCELLED' %}bg-red-500/15 text-red-400{% else %}hover-bg text-sec{% endif %}">
+            Annulés
+        </a>
     </div>
 
     <div class="overflow-x-auto">
@@ -52,21 +68,32 @@
                         </span>
                     </td>
                     <td class="px-5 sm:px-6 py-4">
-                        {% if trip.status != 'COMPLETED' and trip.status != 'CANCELLED' %}
-                        <form method="post" action="{% url 'admin_dashboard:cancel_trip' trip.id %}" class="inline"
-                              onsubmit="return confirm('Annuler ce trajet ?')">
-                            {% csrf_token %}
-                            <button type="submit" class="text-[10px] font-semibold px-3 py-1.5 rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25 transition">
-                                Annuler
-                            </button>
-                        </form>
-                        {% else %}
-                        <span class="text-xs text-sec">—</span>
-                        {% endif %}
+                        <div class="flex flex-wrap gap-2">
+                            {% if trip.status == 'STARTED' %}
+                            <a href="{% url 'admin_dashboard:trip_track' trip.id %}"
+                               class="text-[10px] font-semibold px-3 py-1.5 rounded-full bg-accent/15 accent hover:bg-accent/25 transition">
+                                Suivre
+                            </a>
+                            {% endif %}
+                            {% if trip.status != 'COMPLETED' and trip.status != 'CANCELLED' %}
+                            <form method="post" action="{% url 'admin_dashboard:cancel_trip' trip.id %}" class="inline"
+                                  onsubmit="return confirm('Annuler ce trajet ?')">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="text-[10px] font-semibold px-3 py-1.5 rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25 transition">
+                                    Annuler
+                                </button>
+                            </form>
+                            {% elif trip.status != 'STARTED' %}
+                            <span class="text-xs text-sec">—</span>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="px-6 py-12 text-center text-sec text-sm">Aucun trajet</td></tr>
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-sec text-sm">Aucun trajet</td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
